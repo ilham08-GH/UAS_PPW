@@ -1118,7 +1118,3 @@ with tab2:
         ax.set_xlim(0, max_val * 1.15)
         plt.tight_layout()
         st.pyplot(fig)
-
-        
-    st.markdown("#### PREVIEW STRUKTUR JSON:")
-    st.code(json.dumps(full_export['nodes'][:2], indent=2), language='json')
