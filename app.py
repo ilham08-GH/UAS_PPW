@@ -603,7 +603,7 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
 # HEADER UTAMA (KOTAK KARDUS DENGAN LAKBAN)
 # ==============================================================================
 st.markdown("""
-st.markdown("<div class='cardboard-header' style='text-align: center;'><div class='main-title'>[ NodeCraft ]</div></div>", unsafe_allow_html=True)
+("<div class='cardboard-header' style='text-align: center;'><div class='main-title'>[ NodeCraft ]</div></div>", unsafe_allow_html=True)
 """, unsafe_allow_html=True)
 
 
