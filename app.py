@@ -25,71 +25,229 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ==============================================================================
 st.set_page_config(
     page_title="Citation Graph & Small-World Web Explorer",
-    page_icon="🕸️",
+    page_icon="📦",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Custom Styling (CSS) - Hapus sidebar sepenuhnya & beri gaya modern
+# ==============================================================================
+# CUSTOM STYLING: CARDBOARD / KRAFT BOX NEOBRUTALISM (ANTI AI-SLOP)
+# ==============================================================================
 st.markdown("""
 <style>
-    /* Sembunyikan sidebar dan tombol panah toggle */
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@500;700;800&display=swap');
+
+    /* Sembunyikan sidebar dan elemen bawaan Streamlit */
     [data-testid="stSidebar"], 
     [data-testid="stSidebarNav"], 
-    [data-testid="collapsedControl"] {
+    [data-testid="collapsedControl"],
+    header[data-testid="stHeader"] {
         display: none !important;
     }
-    
+
+    /* Latar Belakang Kertas Kraft / Gudang Kardus */
+    .stApp {
+        background-color: #e6dac8;
+        background-image: radial-gradient(#bfae96 1px, transparent 1px);
+        background-size: 20px 20px;
+        color: #1f1a16;
+        font-family: 'Work Sans', sans-serif;
+    }
+
     .block-container {
-        padding-top: 1.6rem;
-        padding-bottom: 2.5rem;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1380px;
     }
+
+    /* Kotak Header Kardus Utama */
+    .cardboard-header {
+        background-color: #d6bc97;
+        border: 3px solid #1f1a16;
+        box-shadow: 7px 7px 0px #1f1a16;
+        padding: 24px 28px;
+        margin-bottom: 24px;
+        position: relative;
+    }
+
+    /* Efek Lakban Coklat di Atas Kardus */
+    .cardboard-header::before {
+        content: "FRAGILE // NETWORK DATA";
+        position: absolute;
+        top: -14px;
+        right: 28px;
+        background-color: #b85d38;
+        color: #f7f1e5;
+        font-family: 'Space Mono', monospace;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        padding: 4px 12px;
+        border: 2px solid #1f1a16;
+        transform: rotate(1.5deg);
+    }
+
     .main-title {
-        font-size: 2.2rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin-bottom: 0.1rem;
+        font-family: 'Space Mono', monospace;
+        font-size: 2.1rem;
+        font-weight: 700;
+        color: #1f1a16;
+        text-transform: uppercase;
+        letter-spacing: -1px;
+        margin-bottom: 6px;
+        line-height: 1.2;
     }
+
     .sub-title {
-        font-size: 1.05rem;
-        color: #475569;
-        margin-bottom: 0.6rem;
+        font-size: 1rem;
+        color: #3d332a;
+        font-weight: 500;
+        margin-bottom: 14px;
     }
-    .author-badge {
+
+    .author-stamp {
         display: inline-block;
-        background-color: #f1f5f9;
-        border: 1px solid #cbd5e1;
-        color: #1e293b;
-        padding: 4px 14px;
-        border-radius: 9999px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-bottom: 1.0rem;
+        background-color: #f4ece1;
+        border: 2px solid #1f1a16;
+        box-shadow: 3px 3px 0px #1f1a16;
+        color: #1f1a16;
+        font-family: 'Space Mono', monospace;
+        padding: 5px 14px;
+        font-size: 0.8rem;
+        font-weight: 700;
     }
+
+    /* Kartu Metrik Potongan Kardus */
     .metric-card {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 14px;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        background-color: #f4ece1;
+        border: 3px solid #1f1a16;
+        box-shadow: 5px 5px 0px #1f1a16;
+        padding: 16px 12px;
+        text-align: left;
+        position: relative;
+        transition: transform 0.1s ease;
+    }
+    .metric-card:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 7px 7px 0px #1f1a16;
+    }
+    .metric-card::after {
+        content: "";
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 8px;
+        height: 8px;
+        background-color: #1f1a16;
     }
     .metric-val {
-        font-size: 1.7rem;
-        font-weight: 800;
-        color: #2563eb;
+        font-family: 'Space Mono', monospace;
+        font-size: 1.65rem;
+        font-weight: 700;
+        color: #b85d38;
+        line-height: 1.2;
     }
     .metric-lbl {
-        font-size: 0.85rem;
-        color: #64748b;
-        font-weight: 600;
+        font-family: 'Space Mono', monospace;
+        font-size: 0.76rem;
+        color: #1f1a16;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-top: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
+
+    /* Kontainer Graf Kardus */
     .graph-container {
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        background-color: #ffffff;
-        padding: 4px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        border: 3px solid #1f1a16;
+        background-color: #f4ece1;
+        padding: 6px;
+        box-shadow: 7px 7px 0px #1f1a16;
+        margin-bottom: 16px;
+    }
+
+    /* Kotak Empty State Gudang Kardus */
+    .empty-box {
+        background-color: #d6bc97;
+        border: 3px dashed #1f1a16;
+        box-shadow: 6px 6px 0px #1f1a16;
+        padding: 45px 25px;
+        text-align: center;
+        margin-top: 25px;
+    }
+
+    /* Override Input, Tombol, dan Tab Bawaan Streamlit */
+    div[data-testid="stTextInput"] input {
+        background-color: #f4ece1 !important;
+        border: 2px solid #1f1a16 !important;
+        border-radius: 0px !important;
+        color: #1f1a16 !important;
+        font-family: 'Space Mono', monospace !important;
+        font-size: 0.9rem !important;
+        box-shadow: 3px 3px 0px #1f1a16 !important;
+    }
+
+    div[data-baseweb="select"] > div {
+        background-color: #f4ece1 !important;
+        border: 2px solid #1f1a16 !important;
+        border-radius: 0px !important;
+        color: #1f1a16 !important;
+        font-family: 'Space Mono', monospace !important;
+        box-shadow: 3px 3px 0px #1f1a16 !important;
+    }
+
+    .stButton > button, .stDownloadButton > button {
+        background-color: #b85d38 !important;
+        color: #f4ece1 !important;
+        border: 3px solid #1f1a16 !important;
+        border-radius: 0px !important;
+        box-shadow: 5px 5px 0px #1f1a16 !important;
+        font-family: 'Space Mono', monospace !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        padding: 0.55rem 1.2rem !important;
+        transition: all 0.1s ease !important;
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        transform: translate(2px, 2px) !important;
+        box-shadow: 3px 3px 0px #1f1a16 !important;
+        background-color: #9e4b2a !important;
+    }
+
+    /* Tab Bergaya Folder Karton */
+    button[data-baseweb="tab"] {
+        background-color: #d6bc97 !important;
+        border: 2px solid #1f1a16 !important;
+        border-bottom: none !important;
+        border-radius: 0px !important;
+        margin-right: 6px !important;
+        padding: 10px 18px !important;
+        font-family: 'Space Mono', monospace !important;
+        font-weight: 700 !important;
+        color: #1f1a16 !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #f4ece1 !important;
+        box-shadow: 3px -3px 0px #1f1a16 !important;
+        color: #b85d38 !important;
+    }
+    div[data-testid="stTabs"] > div[role="tabpanel"] {
+        background-color: #dfd1bd;
+        border: 3px solid #1f1a16;
+        box-shadow: 6px 6px 0px #1f1a16;
+        padding: 22px;
+    }
+
+    label, .stMarkdown p, .stMarkdown li {
+        color: #1f1a16 !important;
+    }
+    label p {
+        font-family: 'Space Mono', monospace !important;
+        font-weight: 700 !important;
+        font-size: 0.85rem !important;
+        text-transform: uppercase;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -123,21 +281,21 @@ def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
 
 
 # ==============================================================================
-# DETEKSI KOMUNITAS (CLUSTERING KELOMPOK ALA CONNECTED PAPERS)
+# DETEKSI KOMUNITAS (PALET TINTA CETAK INDUSTRIAL DI ATAS KARDUS)
 # ==============================================================================
 COMMUNITY_PALETTE = [
-    '#3b82f6',  # Biru
-    '#10b981',  # Hijau Emerald
-    '#f97316',  # Oranye
-    '#ef4444',  # Merah Coral
-    '#8b5cf6',  # Ungu Violet
-    '#eab308',  # Kuning Emas
-    '#06b6d4',  # Cyan
-    '#ec4899',  # Pink
-    '#84cc16',  # Lime
-    '#a855f7',  # Lavender
-    '#b45309',  # Coklat Amber
-    '#0284c7'   # Biru Langit
+    '#b85d38',  # Rust Terracotta
+    '#3b6e5c',  # Industrial Forest Green
+    '#d48c29',  # Mustard Ochre
+    '#2f5266',  # Slate Petrol
+    '#8c3f4d',  # Faded Crimson
+    '#6b5b3e',  # Olive Bark
+    '#4a6b82',  # Steel Blue
+    '#a35c37',  # Burnt Sienna
+    '#526b44',  # Moss Stamp
+    '#7a496b',  # Vintage Plum
+    '#9c6b30',  # Raw Umber
+    '#3d5a58'   # Deep Teal
 ]
 
 def detect_communities(G):
@@ -215,13 +373,11 @@ class WebCrawler:
         self.page_titles = {}
         self.failed_urls = []
         
-        # Inisialisasi Session HTTP dengan Connection Pooling & Auto-Retry
         self.session = requests.Session()
         retries = Retry(total=2, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
         self.session.mount('https://', HTTPAdapter(max_retries=retries))
         self.session.mount('http://', HTTPAdapter(max_retries=retries))
         
-        # Headers lengkap menyerupai peramban desktop asli (anti blokir WAF / ModSecurity)
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -260,10 +416,8 @@ class WebCrawler:
         try:
             return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=True)
         except requests.exceptions.SSLError:
-            # Fallback jika cert chain kampus bermasalah
             return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=False)
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
-            # Coba fallback ke http jika https gagal/timeout
             if url.startswith('https://'):
                 http_url = 'http://' + url[8:]
                 try:
@@ -281,7 +435,6 @@ class WebCrawler:
             try:
                 response = self._fetch(current_url)
                 
-                # 1. CEK STATUS CODE HTTP (Hanya proses HTTP 200 OK)
                 if response.status_code != 200:
                     self.failed_urls.append((current_url, f"HTTP {response.status_code}"))
                     continue
@@ -293,7 +446,6 @@ class WebCrawler:
                 title_tag = soup.find('title')
                 title = title_tag.get_text(strip=True) if title_tag else current_url
                 
-                # 2. FILTER SOFT-404 & ERROR PAGE
                 title_lower = title.lower()
                 error_signatures = [
                     'page not found', '404 not found', 'halaman tidak ditemukan', 
@@ -335,24 +487,19 @@ class WebCrawler:
 
 
 # ==============================================================================
-# FUNGSI MEMBANGUN CITATION GRAPH BERGAYA CONNECTED PAPERS (TENANG & STATIS)
+# FUNGSI MEMBANGUN CITATION GRAPH BERGAYA KERTAS KARDUS
 # ==============================================================================
 def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url,
                                     color_mode="Klaster Komunitas (Connected Papers)",
                                     size_multiplier=1.0, spring_spacing=100,
                                     show_all_labels=False, freeze_physics=True):
     """
-    Menghasilkan graf interaktif bergaya Connected Papers:
-    - Background putih bersih (#ffffff)
-    - Node dikelompokkan ke dalam klaster warna komunitas
-    - Node pusat (seed/Top-1) berwarna Charcoal gelap (#1e293b)
-    - Garis edges abu-abu lembut (#cbd5e1)
-    - Tata letak ForceAtlas2 dengan opsi Kunci Posisi (Statis / Tidak Bergerak)
+    Menghasilkan graf interaktif di atas kanvas kertas unbleached (#f4ece1)
+    dengan border hitam tegas ala potongan pin kardus.
     """
     net = Network(height='720px', width='100%', directed=True,
-                  bgcolor='#ffffff', font_color='#1e293b', cdn_resources='remote')
+                  bgcolor='#f4ece1', font_color='#1f1a16', cdn_resources='remote')
     
-    # Gunakan ForceAtlas2Based physics: stabilisasi cepat & teratur
     net.force_atlas_2based(
         gravity=-50,
         central_gravity=0.015,
@@ -380,25 +527,21 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
         name_short = get_page_name(node, page_titles, max_len=26)
         
         rank_pos = [i + 1 for i, (u, _) in enumerate(ranking) if u == node]
-        rank_str = f"Rank #{rank_pos[0]}" if rank_pos else ""
+        rank_str = f"RANK #{rank_pos[0]}" if rank_pos else ""
         comm_id = node_communities.get(node, 0)
 
-        # Pewarnaan ala Connected Papers:
         if node == top1_node or node == seed_url:
-            node_color = '#1e293b'
-            border_color = '#0f172a'
-            font_color = '#ffffff' if node_size > 28 else '#1e293b'
+            node_color = '#1f1a16'
+            border_color = '#b85d38'
         elif color_mode == "Klaster Komunitas (Connected Papers)":
             node_color = COMMUNITY_PALETTE[comm_id % len(COMMUNITY_PALETTE)]
-            border_color = node_color
-            font_color = '#0f172a'
+            border_color = '#1f1a16'
         else:
-            r = int(59 + norm_val * 180)
-            g = int(130 - norm_val * 80)
-            b = int(246 - norm_val * 180)
+            r = int(214 - norm_val * 120)
+            g = int(188 - norm_val * 115)
+            b = int(151 - norm_val * 110)
             node_color = f'rgb({r}, {g}, {b})'
-            border_color = '#334155'
-            font_color = '#0f172a'
+            border_color = '#1f1a16'
 
         if show_all_labels or node in top_nodes or node == top1_node:
             node_label = name_short
@@ -406,14 +549,13 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
             node_label = ""
 
         hover_html = (
-            f"<div style='font-family: Inter, system-ui, sans-serif; padding: 6px; font-size: 12px; line-height: 1.4;'>"
-            f"<b style='color: #0f172a; font-size: 13px;'>{title_full}</b><br>"
-            f"<span style='color: #64748b; font-size: 11px;'>{node}</span><br>"
-            f"<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 6px 0;'>"
-            f"<b>🏆 PageRank:</b> <span style='color: #2563eb; font-weight: bold;'>{pr_val:.6f}</span> ({rank_str})<br>"
-            f"<b>🎨 Klaster Komunitas:</b> #{comm_id + 1}<br>"
-            f"<b>📥 Tautan Masuk (In-Degree):</b> {G.in_degree(node)}<br>"
-            f"<b>📤 Tautan Keluar (Out-Degree):</b> {G.out_degree(node)}"
+            f"<div style='font-family: Space Mono, monospace; background: #f4ece1; border: 2px solid #1f1a16; padding: 8px; font-size: 12px; color: #1f1a16;'>"
+            f"<b style='font-size: 13px;'>{title_full}</b><br>"
+            f"<span style='color: #5c4e43; font-size: 11px;'>{node}</span><br>"
+            f"<hr style='border: 0; border-top: 2px dashed #1f1a16; margin: 6px 0;'>"
+            f"<b>PAGERANK:</b> <span style='color: #b85d38; font-weight: bold;'>{pr_val:.6f}</span> ({rank_str})<br>"
+            f"<b>KLASTER:</b> #{comm_id + 1}<br>"
+            f"<b>IN-DEGREE:</b> {G.in_degree(node)} | <b>OUT-DEGREE:</b> {G.out_degree(node)}"
             f"</div>"
         )
 
@@ -422,28 +564,27 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
             label=node_label,
             title=hover_html,
             size=node_size,
-            color=node_color,
-            borderWidth=2,
+            color={'background': node_color, 'border': border_color, 'highlight': {'background': '#b85d38', 'border': '#1f1a16'}},
+            borderWidth=2.5,
             borderWidthSelected=4,
-            font={'size': 11, 'color': font_color, 'face': 'Inter, sans-serif', 'strokeWidth': 2, 'strokeColor': '#ffffff'}
+            font={'size': 11, 'color': '#1f1a16', 'face': 'Space Mono, monospace', 'strokeWidth': 3, 'strokeColor': '#f4ece1'}
         )
 
     for source, target in G.edges():
         is_highlight = target in top_nodes[:3]
-        edge_color = '#94a3b8' if is_highlight else '#cbd5e1'
-        edge_width = 1.4 if is_highlight else 0.9
+        edge_color = '#6e5d4f' if is_highlight else '#b5a492'
+        edge_width = 1.6 if is_highlight else 1.0
 
         net.add_edge(
             source, target,
-            color={'color': edge_color, 'highlight': '#2563eb', 'hover': '#3b82f6'},
-            arrows={'to': {'enabled': True, 'scaleFactor': 0.6}},
+            color={'color': edge_color, 'highlight': '#b85d38', 'hover': '#1f1a16'},
+            arrows={'to': {'enabled': True, 'scaleFactor': 0.55}},
             width=edge_width,
-            smooth={'type': 'continuous', 'roundness': 0.15}
+            smooth={'type': 'continuous', 'roundness': 0.12}
         )
 
     html_out = net.generate_html()
 
-    # Kunci posisi graf jika mode statis aktif (agar tidak bergoyang / bergerak-gerak)
     if freeze_physics:
         freeze_script = """
         network.once("stabilized", function() {
@@ -459,40 +600,44 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
 
 
 # ==============================================================================
-# HEADER UTAMA
+# HEADER UTAMA (KOTAK KARDUS DENGAN LAKBAN)
 # ==============================================================================
-st.markdown("<div class='main-title'>🕸️ Citation Graph & Small-World Web Explorer</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>Visualisasi Jaringan Hyperlink Web Bergaya <i>Connected Papers</i> dengan Analisis Small-World & PageRank</div>", unsafe_allow_html=True)
-st.markdown("<div class='author-badge'>👤 Muhammad Ilham Adila Almafaz (NIM: 230411100113) — Teknik Informatika UTM</div>", unsafe_allow_html=True)
+st.markdown("""
+<div class='cardboard-header'>
+    <div class='main-title'>[ CITATION GRAPH & SMALL-WORLD EXPLORER ]</div>
+    <div class='sub-title'>Pemetaan Jaringan Hyperlink Web Bergaya Connected Papers — Analisis Topologi Small-World & PageRank</div>
+    <div class='author-stamp'>OPR: MUHAMMAD ILHAM ADILA ALMAFAZ // NIM: 230411100113 // TEKNIK INFORMATIKA UTM</div>
+</div>
+""", unsafe_allow_html=True)
 
 
 # ==============================================================================
-# PANEL PENGATURAN & FORM CRAWLING (DEFAULT KOSONG)
+# PANEL PENGATURAN & FORM CRAWLING
 # ==============================================================================
 with st.container():
     col_c1, col_c2 = st.columns([3, 2])
     with col_c1:
         seed_url_input = st.text_input(
-            "🌐 Seed URL Target (Halaman Awal):",
+            "SEED URL TARGET (HALAMAN AWAL):",
             value="",
-            placeholder="Masukkan URL, contoh: https://example.com, https://uinsa.ac.id, https://www.trunojoyo.ac.id"
+            placeholder="https://uinsa.ac.id atau https://www.trunojoyo.ac.id"
         )
     with col_c2:
         domain_filter_input = st.text_input(
-            "🔒 Batasan Domain (Opsional):",
+            "BATASAN DOMAIN (OPSIONAL):",
             value="",
-            placeholder="Kosongkan untuk otomatis menggunakan domain Seed URL"
+            placeholder="Kosongkan untuk otomatis mengikuti domain Seed URL"
         )
 
     col_p1, col_p2, col_p3 = st.columns([1, 1, 1])
     with col_p1:
-        max_pages_input = st.slider("Maks Halaman:", min_value=5, max_value=80, value=25, step=5)
+        max_pages_input = st.slider("MAKS HALAMAN:", min_value=5, max_value=80, value=25, step=5)
     with col_p2:
-        delay_input = st.slider("Jeda Request (detik):", min_value=0.1, max_value=2.0, value=0.4, step=0.1)
+        delay_input = st.slider("JEDA REQUEST (DETIK):", min_value=0.1, max_value=2.0, value=0.4, step=0.1)
     with col_p3:
-        damping_factor = st.slider("Damping Factor (d):", min_value=0.10, max_value=0.99, value=0.85, step=0.05)
+        damping_factor = st.slider("DAMPING FACTOR (d):", min_value=0.10, max_value=0.99, value=0.85, step=0.05)
 
-    crawl_btn = st.button("🚀 Mulai Crawling & Bangun Graf", type="primary", use_container_width=True)
+    crawl_btn = st.button("MULAI CRAWLING & BANGUN GRAF", type="primary", use_container_width=True)
 
 
 # ==============================================================================
@@ -504,7 +649,7 @@ if 'graph_data' not in st.session_state:
 if crawl_btn:
     raw_seed = seed_url_input.strip()
     if not raw_seed:
-        st.warning("⚠️ Silakan masukkan Seed URL target terlebih dahulu sebelum memulai crawling!")
+        st.warning("PERINGATAN: Masukkan Seed URL target terlebih dahulu sebelum memulai crawling.")
     else:
         if not raw_seed.startswith(('http://', 'https://')):
             raw_seed = 'https://' + raw_seed
@@ -532,9 +677,9 @@ if crawl_btn:
         def on_progress(current, total, url, title):
             pct = min(1.0, current / total)
             progress_bar.progress(pct)
-            status_text.caption(f"[{current}/{total}] Mengunjungi: {title[:40]} ({url[:45]}...)")
+            status_text.caption(f"[{current}/{total}] LOG: {title[:40]} ({url[:45]}...)")
             
-        with st.spinner(f"🕷️ Sedang melakukan crawling hyperlink pada {raw_seed}..."):
+        with st.spinner(f"Memindai jaringan hyperlink pada {raw_seed}..."):
             visited, edges, titles = crawler.crawl(progress_callback=on_progress)
             
         progress_bar.empty()
@@ -542,7 +687,7 @@ if crawl_btn:
         
         if len(visited) == 0:
             err_reason = crawler.failed_urls[0][1] if crawler.failed_urls else "Server tidak merespons dalam batas waktu."
-            st.error(f"❌ Gagal mengambil halaman valid dari **{raw_seed}**.\n\n**Penyebab:** `{err_reason}`\n\n*Tips: Pastikan URL aktif, coba tanpa awalan `www.` (misal `https://uinsa.ac.id`), atau periksa koneksi internet server target.*")
+            st.error(f"GAGAL MENGAMBIL DATA DARI {raw_seed}.\n\nPENYEBAB: `{err_reason}`\n\nPastikan URL aktif atau coba tanpa awalan `www.`")
         else:
             G_crawled = nx.DiGraph()
             G_crawled.add_nodes_from(visited)
@@ -556,23 +701,23 @@ if crawl_btn:
                 'seed': raw_seed,
                 'failed_count': len(crawler.failed_urls)
             }
-            msg = f"✅ Crawling berhasil! {G_crawled.number_of_nodes()} simpul dan {G_crawled.number_of_edges()} busur berhasil dihubungkan."
 
 
 # ==============================================================================
-# TAMPILAN AWAL JIKA BELUM ADA DATA (EMPTY STATE)
+# TAMPILAN AWAL JIKA BELUM ADA DATA (EMPTY STATE KARDUS)
 # ==============================================================================
 if st.session_state.graph_data is None:
     st.markdown("""
-    <div style='background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 14px; padding: 45px 25px; text-align: center; margin-top: 25px;'>
-        <div style='font-size: 3.2rem; margin-bottom: 12px;'>🕸️</div>
-        <h3 style='color: #1e293b; margin-bottom: 8px;'>Belum Ada Jaringan Web yang Dianalisis</h3>
-        <p style='color: #64748b; max-width: 620px; margin: 0 auto 18px auto; font-size: 0.96rem; line-height: 1.6;'>
-            Silakan masukkan <b>Seed URL Target</b> pada form di atas (contoh: website universitas seperti <code>https://uinsa.ac.id</code>, <code>https://www.its.ac.id</code>, atau <code>https://www.trunojoyo.ac.id</code>), 
-            tentukan jumlah halaman maksimal, lalu klik tombol <b>🚀 Mulai Crawling & Bangun Graf</b>.
+    <div class='empty-box'>
+        <div style='font-family: Space Mono, monospace; font-size: 1.5rem; font-weight: 700; color: #1f1a16; margin-bottom: 10px;'>
+            [ KARDUS DATA KOSONG // BELUM ADA GRAF ]
+        </div>
+        <p style='color: #3d332a; max-width: 640px; margin: 0 auto 18px auto; font-size: 0.95rem; line-height: 1.6;'>
+            Masukkan <b>Seed URL Target</b> pada kolom di atas (contoh: <code>https://uinsa.ac.id</code>, <code>https://www.its.ac.id</code>, atau <code>https://www.trunojoyo.ac.id</code>), 
+            atur jumlah halaman maksimal, lalu tekan tombol <b>MULAI CRAWLING & BANGUN GRAF</b>.
         </p>
-        <span style='background: #e2e8f0; color: #334155; padding: 6px 16px; border-radius: 9999px; font-size: 0.85rem; font-weight: 600;'>
-            💡 Dilengkapi Connection Pooling, toleransi latensi kampus lambat, filter anti-404 otomatis, dan visualisasi statis Connected Papers.
+        <span style='background: #f4ece1; border: 2px solid #1f1a16; color: #1f1a16; padding: 6px 14px; font-family: Space Mono, monospace; font-size: 0.78rem; font-weight: 700;'>
+            SPEC: HTTP SESSION POOLING // FILTER ANTI-404 // LOUVAIN CLUSTERING
         </span>
     </div>
     """, unsafe_allow_html=True)
@@ -586,281 +731,21 @@ G = st.session_state.graph_data['G']
 titles = st.session_state.graph_data['titles']
 seed_url = st.session_state.graph_data['seed']
 
-# Hitung PageRank
 pr_scores = compute_pagerank(G, alpha=damping_factor)
 ranking = sorted(pr_scores.items(), key=lambda x: x[1], reverse=True)
 
-# Hitung Metrik Small-World
 G_undir = G.to_undirected()
 clustering_coeff = nx.average_clustering(G_undir) if G_undir.number_of_nodes() > 1 else 0
 
-# Random graph benchmark
 N_nodes = G.number_of_nodes()
 E_edges = G.number_of_edges()
 avg_k = (2 * E_edges / N_nodes) if N_nodes > 0 else 0
 c_random = (avg_k / N_nodes) if N_nodes > 0 else 0.001
 clustering_ratio = (clustering_coeff / c_random) if c_random > 0 else 1.0
 
-# Jarak terpendek rata-rata pada komponen terbesar
 if nx.is_connected(G_undir):
     avg_path_len = nx.average_shortest_path_length(G_undir)
 else:
     if G_undir.number_of_nodes() > 0:
         largest_cc = max(nx.connected_components(G_undir), key=len)
-        avg_path_len = nx.average_shortest_path_length(G_undir.subgraph(largest_cc)) if len(largest_cc) > 1 else 0
-    else:
-        avg_path_len = 0
-
-in_degs = dict(G.in_degree())
-out_degs = dict(G.out_degree())
-density_val = nx.density(G)
-best_node = ranking[0][0] if ranking else seed_url
-best_title = get_page_name(best_node, titles, max_len=26)
-best_pr = ranking[0][1] if ranking else 0.0
-
-
-# ==============================================================================
-# DASHBOARD METRIC CARDS
-# ==============================================================================
-col1, col2, col3, col4, col5 = st.columns(5)
-with col1:
-    st.markdown(f"""
-    <div class='metric-card'>
-        <div class='metric-val'>{N_nodes}</div>
-        <div class='metric-lbl'>Total Simpul (Nodes)</div>
-    </div>
-    """, unsafe_allow_html=True)
-with col2:
-    st.markdown(f"""
-    <div class='metric-card'>
-        <div class='metric-val'>{E_edges}</div>
-        <div class='metric-lbl'>Total Busur (Edges)</div>
-    </div>
-    """, unsafe_allow_html=True)
-with col3:
-    st.markdown(f"""
-    <div class='metric-card'>
-        <div class='metric-val'>{clustering_coeff:.3f}</div>
-        <div class='metric-lbl'>Koef. Klasterisasi (C̄)</div>
-    </div>
-    """, unsafe_allow_html=True)
-with col4:
-    st.markdown(f"""
-    <div class='metric-card'>
-        <div class='metric-val'>{avg_path_len:.2f}</div>
-        <div class='metric-lbl'>Rata-rata Jarak (L)</div>
-    </div>
-    """, unsafe_allow_html=True)
-with col5:
-    st.markdown(f"""
-    <div class='metric-card'>
-        <div class='metric-val'>{best_pr:.3f}</div>
-        <div class='metric-lbl'>🏆 Top-1: {best_title}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-
-# ==============================================================================
-# TABS NAVIGASI
-# ==============================================================================
-tab1, tab2, tab3, tab4 = st.tabs([
-    "🕸️ Citation Graph (Connected Papers Style)",
-    "🏆 Top-10 Ranking & Grafik",
-    "🔬 Analisis Sifat Small-World",
-    "💾 Ekspor Data (Server Lab Ready)"
-])
-
-
-# ==============================================================================
-# TAB 1: CITATION GRAPH BERGAYA CONNECTED PAPERS (TENANG & STATIS)
-# ==============================================================================
-with tab1:
-    col_t1, col_t2, col_t3, col_t4 = st.columns([3, 2, 2, 3])
-    with col_t1:
-        color_choice = st.selectbox(
-            "🎨 Skema Warna Simpul:",
-            ["Klaster Komunitas (Connected Papers)", "Gradasi Skor PageRank"]
-        )
-    with col_t2:
-        size_scale = st.slider("Ukuran Simpul (Importance):", 0.5, 2.0, 1.0, 0.1)
-    with col_t3:
-        spacing_scale = st.slider("Jarak Klaster (Spacing):", 60, 200, 100, 10)
-    with col_t4:
-        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-        freeze_toggle = st.checkbox("🔒 Kunci Posisi Graf (Tenang / Tidak Bergerak)", value=True,
-                                    help="Jika aktif, posisi simpul langsung dikunci setelah susunan klaster terbentuk sehingga graf tidak bergoyang-goyang.")
-        show_all_lbl = st.checkbox("Tampilkan Semua Judul", value=False)
-
-    html_graph = generate_connected_papers_graph(
-        G, pr_scores, ranking, titles, seed_url,
-        color_mode=color_choice,
-        size_multiplier=size_scale,
-        spring_spacing=spacing_scale,
-        show_all_labels=show_all_lbl,
-        freeze_physics=freeze_toggle
-    )
-    
-    st.markdown("<div class='graph-container'>", unsafe_allow_html=True)
-    components.html(html_graph, height=720, scrolling=False)
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-    st.markdown(f"""
-    **Keterangan Visual (Gaya Connected Papers):**
-    - ⚫ **Simpul Hitam/Charcoal ({best_title}):** Simpul pusat / jangkar utama jaringan web (*Seed Paper/Top Node*).
-    - 🔵 🟢 🟠 🔴 🟣 **Simpul Warna-Warni:** Menandakan **Klaster Komunitas Tematik** yang terkelompok secara otomatis menggunakan deteksi modularitas Louvain.
-    - 🔘 **Ukuran Lingkaran:** Merefleksikan **bobot PageRank / Tingkat Pengaruh**. Semakin penting sebuah halaman, semakin besar lingkarannya.
-    - 🔗 **Garis Abu-abu Halus:** Koneksi hyperlink antar halaman. Tautan padat di dalam satu kelompok membentuk **komunitas**, sedangkan tautan antar-kelompok membentuk **jembatan pintas (*small-world shortcut*)**.
-    """)
-
-
-# ==============================================================================
-# TAB 2: TOP-10 RANKING & BAR CHART
-# ==============================================================================
-with tab2:
-    st.markdown("### 🏆 Top-10 Halaman Web dengan PageRank Tertinggi")
-    
-    top10_rows = []
-    medals = ["🥇", "🥈", "🥉", "4", "5", "6", "7", "8", "9", "10"]
-    for i, (url, score) in enumerate(ranking[:10]):
-        top10_rows.append({
-            'Peringkat': medals[i],
-            'Nama Halaman': get_page_name(url, titles, max_len=36),
-            'URL Asli': url,
-            'Skor PageRank': round(score, 6),
-            'Tautan Masuk (In-Degree)': in_degs.get(url, 0),
-            'Tautan Keluar (Out-Degree)': out_degs.get(url, 0)
-        })
-    df_top10 = pd.DataFrame(top10_rows)
-    st.dataframe(df_top10, use_container_width=True, hide_index=True)
-    
-    if len(ranking) > 0:
-        st.markdown("#### Perbandingan Skor PageRank Top-10")
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-        plot_items = ranking[:min(10, len(ranking))][::-1]
-        plot_labels = [get_page_name(u, titles, max_len=24) for u, _ in plot_items]
-        plot_scores = [s for _, s in plot_items]
-        colors = plt.cm.RdYlGn_r(np.linspace(0.15, 0.85, len(plot_items)))
-        
-        bars = ax.barh(range(len(plot_items)), plot_scores, color=colors, edgecolor='#1e293b', height=0.65)
-        ax.set_yticks(range(len(plot_items)))
-        ax.set_yticklabels(plot_labels, fontsize=9.5, fontweight='bold', color='#1e293b')
-        ax.set_xlabel('Skor PageRank', fontsize=10, fontweight='bold')
-        ax.grid(axis='x', linestyle='--', alpha=0.5)
-        
-        for bar in bars:
-            w = bar.get_width()
-            ax.text(w + 0.002, bar.get_y() + bar.get_height() / 2, f"{w:.4f}",
-                    va='center', fontsize=9, fontweight='bold', color='#0f172a')
-                    
-        plt.tight_layout()
-        st.pyplot(fig)
-
-
-# ==============================================================================
-# TAB 3: ANALISIS SIFAT SMALL-WORLD
-# ==============================================================================
-with tab3:
-    st.markdown("### 🔬 Analisis Karakteristik Small-World Network")
-    st.markdown(r"""
-    Menurut model teoretis **Watts & Strogatz (1998)**, sebuah jaringan dikategorikan sebagai **Small-World Network** jika memenuhi dua kriteria utama:
-    1. **Koefisien Klasterisasi Tinggi ($C \gg C_{random}$):** Simpul-simpul membentuk kelompok komunitas padat (*high local clustering*).
-    2. **Jarak Terpendek Pendek ($L \approx L_{random}$):** Hanya membutuhkan beberapa lompatan (*hops*) singkat untuk mencapai simpul mana pun di jaringan.
-    """)
-    
-    col_sw1, col_sw2 = st.columns(2)
-    with col_sw1:
-        st.markdown("#### Verifikasi Empiris:")
-        st.write(f"- **Koefisien Klasterisasi Nyata ($C$):** `{clustering_coeff:.4f}`")
-        st.write(f"- **Koefisien Klasterisasi Graf Acak ($C_{{random}}$):** `{c_random:.4f}`")
-        st.write(f"- **Rasio Klasterisasi ($C / C_{{random}}$):** `{clustering_ratio:.2f}x lipat lebih tinggi!`")
-        st.write(f"- **Rata-rata Jarak Terpendek ($L$):** `{avg_path_len:.2f} lompatan`")
-        
-        if clustering_ratio > 1.5:
-            st.success("✅ **Terbukti:** Graf memenuhi sifat **Small-World Network**, di mana website membentuk klaster halaman/subtopik yang padat dan saling terhubung melalui halaman beranda/hub.")
-        else:
-            st.info("ℹ️ Struktur graf tersebar secara merata.")
-            
-    with col_sw2:
-        st.markdown("#### Ukuran Sentralitas Tambahan:")
-        in_deg_cent = nx.in_degree_centrality(G)
-        betw_cent = nx.betweenness_centrality(G)
-        cent_data = []
-        for r_i, (u_i, p_i) in enumerate(ranking[:6], 1):
-            cent_data.append({
-                'Rank': r_i,
-                'Halaman': get_page_name(u_i, titles, max_len=24),
-                'PageRank': round(p_i, 4),
-                'In-Degree C.': round(in_deg_cent[u_i], 4),
-                'Betweenness C.': round(betw_cent[u_i], 4)
-            })
-        st.dataframe(pd.DataFrame(cent_data), hide_index=True)
-
-
-# ==============================================================================
-# TAB 4: EKSPOR DATA & INTEGRASI SERVER LAB
-# ==============================================================================
-with tab4:
-    st.markdown("### 💾 Ekspor Hasil untuk Deployment Server Lab")
-    st.info("File-file di bawah ini siap disetor atau diintegrasikan dengan backend server lab (Flask / FastAPI / D3.js).")
-    
-    nodes_export = []
-    node_comms = detect_communities(G)
-    for r, (u, score) in enumerate(ranking, 1):
-        nodes_export.append({
-            'id': u,
-            'name': get_page_name(u, titles, max_len=40),
-            'title': titles.get(u, u),
-            'community_cluster': node_comms.get(u, 0) + 1,
-            'pagerank': round(score, 6),
-            'rank': r,
-            'in_degree': in_degs.get(u, 0),
-            'out_degree': out_degs.get(u, 0)
-        })
-    edges_export = [{'source': s, 'target': t} for s, t in G.edges()]
-    full_export = {
-        'metadata': {
-            'seed_url': seed_url,
-            'network_type': 'Small-World Citation Graph',
-            'total_nodes': N_nodes,
-            'total_edges': E_edges,
-            'clustering_coefficient': round(clustering_coeff, 4),
-            'average_shortest_path_length': round(avg_path_len, 4),
-            'density': round(density_val, 6),
-            'damping_factor': damping_factor
-        },
-        'nodes': nodes_export,
-        'edges': edges_export
-    }
-    json_str = json.dumps(full_export, indent=2, ensure_ascii=False)
-    csv_str = df_top10.to_csv(index=False)
-    
-    col_d1, col_d2, col_d3 = st.columns(3)
-    with col_d1:
-        st.download_button(
-            label="📥 Download JSON Graf & PageRank",
-            data=json_str,
-            file_name="graph_pagerank.json",
-            mime="application/json",
-            use_container_width=True
-        )
-    with col_d2:
-        st.download_button(
-            label="📥 Download CSV Top-10 PageRank",
-            data=csv_str,
-            file_name="top10_pagerank.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-    with col_d3:
-        st.download_button(
-            label="📥 Download HTML Citation Graph",
-            data=html_graph,
-            file_name="citation_graph.html",
-            mime="text/html",
-            use_container_width=True
-        )
-        
-    st.markdown("#### Preview Struktur JSON:")
-    st.code(json.dumps(full_export['nodes'][:2], indent=2), language='json')
+        avg_path_len = nx.average_shortest_path_length(G_
