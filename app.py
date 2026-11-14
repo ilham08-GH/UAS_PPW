@@ -809,7 +809,59 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "03 // SMALL-WORLD ANALYSIS",
     "04 // EKSPOR DATA LAB"
 ])
+# ==============================================================================
+# CUSTOM STYLING: CARDBOARD / KRAFT BOX NEOBRUTALISM (ANTI AI-SLOP)
+# ==============================================================================
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@500;700;800&display=swap');
 
+    /* ... (CSS lainnya seperti stApp, cardboard-header, dll) ... */
+
+    /* ==========================================================
+       PENGATURAN TAB KARTON TEGAS (YANG DITAMBAHKAN)
+       ========================================================== */
+    div[data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: transparent !important;
+        border-bottom: none !important;
+    }
+
+    button[data-baseweb="tab"] {
+        background-color: #d6bc97 !important;
+        border: 2.5px solid #1f1a16 !important;
+        border-radius: 0px !important;
+        box-shadow: 3px 3px 0px #1f1a16 !important;
+        padding: 10px 16px !important;
+        font-family: 'Space Mono', monospace !important;
+        font-weight: 700 !important;
+        color: #1f1a16 !important;
+        transition: all 0.1s ease !important;
+    }
+
+    button[data-baseweb="tab"]:hover {
+        background-color: #c4a982 !important;
+        transform: translate(-1px, -1px);
+        box-shadow: 4px 4px 0px #1f1a16 !important;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #f4ece1 !important;
+        color: #b85d38 !important;
+        border-bottom: 2.5px solid #f4ece1 !important;
+        box-shadow: 4px 4px 0px #1f1a16 !important;
+        transform: translate(-2px, -2px);
+    }
+
+    div[data-testid="stTabs"] > div[role="tabpanel"] {
+        background-color: #f4ece1;
+        border: 3px solid #1f1a16;
+        box-shadow: 7px 7px 0px #1f1a16;
+        padding: 24px;
+        margin-top: -2px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ==============================================================================
 # TAB 1: CITATION GRAPH
