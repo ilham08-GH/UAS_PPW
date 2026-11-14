@@ -748,4 +748,272 @@ if nx.is_connected(G_undir):
 else:
     if G_undir.number_of_nodes() > 0:
         largest_cc = max(nx.connected_components(G_undir), key=len)
-        avg_path_len = nx.average_shortest_path_length(G_
+        avg_path_len = nx.average_shortest_path_length(G_undir.subgraph(largest_cc)) if len(largest_cc) > 1 else 0
+    else:
+        avg_path_len = 0
+
+in_degs = dict(G.in_degree())
+out_degs = dict(G.out_degree())
+density_val = nx.density(G)
+best_node = ranking[0][0] if ranking else seed_url
+best_title = get_page_name(best_node, titles, max_len=22)
+best_pr = ranking[0][1] if ranking else 0.0
+
+
+# ==============================================================================
+# DASHBOARD METRIC CARDS (POTONGAN KARTON)
+# ==============================================================================
+st.markdown("<br>", unsafe_allow_html=True)
+col1, col2, col3, col4, col5 = st.columns(5)
+with col1:
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div class='metric-val'>{N_nodes}</div>
+        <div class='metric-lbl'>TOTAL SIMPUL (NODES)</div>
+    </div>
+    """, unsafe_allow_html=True)
+with col2:
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div class='metric-val'>{E_edges}</div>
+        <div class='metric-lbl'>TOTAL BUSUR (EDGES)</div>
+    </div>
+    """, unsafe_allow_html=True)
+with col3:
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div class='metric-val'>{clustering_coeff:.3f}</div>
+        <div class='metric-lbl'>KOEF. KLASTER (C)</div>
+    </div>
+    """, unsafe_allow_html=True)
+with col4:
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div class='metric-val'>{avg_path_len:.2f}</div>
+        <div class='metric-lbl'>JARAK RATA-RATA (L)</div>
+    </div>
+    """, unsafe_allow_html=True)
+with col5:
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div class='metric-val'>{best_pr:.3f}</div>
+        <div class='metric-lbl'>TOP-1: {best_title}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+
+# ==============================================================================
+# TABS NAVIGASI (FOLDER KARTON)
+# ==============================================================================
+tab1, tab2, tab3, tab4 = st.tabs([
+    "01 // CITATION GRAPH",
+    "02 // TOP-10 PAGERANK",
+    "03 // SMALL-WORLD ANALYSIS",
+    "04 // EKSPOR DATA LAB"
+])
+
+
+# ==============================================================================
+# TAB 1: CITATION GRAPH
+# ==============================================================================
+with tab1:
+    col_t1, col_t2, col_t3, col_t4 = st.columns([3, 2, 2, 3])
+    with col_t1:
+        color_choice = st.selectbox(
+            "SKEMA WARNA SIMPUL:",
+            ["Klaster Komunitas (Connected Papers)", "Gradasi Skor PageRank"]
+        )
+    with col_t2:
+        size_scale = st.slider("SKALA SIMPUL:", 0.5, 2.0, 1.0, 0.1)
+    with col_t3:
+        spacing_scale = st.slider("JARAK KLASTER:", 60, 200, 100, 10)
+    with col_t4:
+        st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+        freeze_toggle = st.checkbox("KUNCI POSISI GRAF (STATIS)", value=True)
+        show_all_lbl = st.checkbox("TAMPILKAN SEMUA JUDUL", value=False)
+
+    html_graph = generate_connected_papers_graph(
+        G, pr_scores, ranking, titles, seed_url,
+        color_mode=color_choice,
+        size_multiplier=size_scale,
+        spring_spacing=spacing_scale,
+        show_all_labels=show_all_lbl,
+        freeze_physics=freeze_toggle
+    )
+    
+    st.markdown("<div class='graph-container'>", unsafe_allow_html=True)
+    components.html(html_graph, height=720, scrolling=False)
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    **LEGENDA PETA JARINGAN:**
+    - **SIMPUL HITAM ARANG ({best_title}):** Simpul jangkar utama / skor PageRank tertinggi.
+    - **SIMPUL WARNA CETAK INDUSTRIAL:** Klaster komunitas tematik hasil deteksi modularitas Louvain.
+    - **DIAMETER LINGKARAN:** Proporsional terhadap bobot otoritas PageRank masing-masing halaman.
+    """)
+
+
+# ==============================================================================
+# TAB 2: TOP-10 RANKING & BAR CHART KARDUS
+# ==============================================================================
+with tab2:
+    st.markdown("#### PERINGKAT 10 HALAMAN DENGAN OTORITAS PAGERANK TERTINGGI")
+    
+    top10_rows = []
+    for i, (url, score) in enumerate(ranking[:10]):
+        top10_rows.append({
+            'RANK': f"#{i+1:02d}",
+            'NAMA HALAMAN': get_page_name(url, titles, max_len=36),
+            'URL ASLI': url,
+            'SKOR PAGERANK': round(score, 6),
+            'IN-DEGREE': in_degs.get(url, 0),
+            'OUT-DEGREE': out_degs.get(url, 0)
+        })
+    df_top10 = pd.DataFrame(top10_rows)
+    st.dataframe(df_top10, use_container_width=True, hide_index=True)
+    
+    if len(ranking) > 0:
+        st.markdown("#### GRAFIK DISTRIBUSI TOP-10 PAGERANK")
+        fig, ax = plt.subplots(figsize=(10, 4.5), facecolor='#f4ece1')
+        ax.set_facecolor('#f4ece1')
+        
+        plot_items = ranking[:min(10, len(ranking))][::-1]
+        plot_labels = [get_page_name(u, titles, max_len=24) for u, _ in plot_items]
+        plot_scores = [s for _, s in plot_items]
+        
+        bars = ax.barh(
+            range(len(plot_items)),
+            plot_scores,
+            color='#b85d38',
+            edgecolor='#1f1a16',
+            linewidth=2,
+            height=0.62
+        )
+        ax.set_yticks(range(len(plot_items)))
+        ax.set_yticklabels(plot_labels, fontsize=9, fontweight='bold', family='monospace', color='#1f1a16')
+        ax.set_xlabel('SKOR PAGERANK', fontsize=9.5, fontweight='bold', family='monospace', color='#1f1a16')
+        
+        for spine in ax.spines.values():
+            spine.set_edgecolor('#1f1a16')
+            spine.set_linewidth(2)
+            
+        ax.grid(axis='x', linestyle='--', color='#8c7a66', alpha=0.6)
+        
+        for bar in bars:
+            w = bar.get_width()
+            ax.text(w + (max(plot_scores) * 0.015), bar.get_y() + bar.get_height() / 2, f"{w:.4f}",
+                    va='center', fontsize=8.5, fontweight='bold', family='monospace', color='#1f1a16')
+                    
+        ax.set_xlim(0, max(plot_scores) * 1.15)
+        plt.tight_layout()
+        st.pyplot(fig)
+
+
+# ==============================================================================
+# TAB 3: ANALISIS SIFAT SMALL-WORLD
+# ==============================================================================
+with tab3:
+    st.markdown("#### PENGUJIAN TOPOLOGI SMALL-WORLD (WATTS & STROGATZ, 1998)")
+    st.markdown(r"""
+    Sebuah jaringan memenuhi kriteria **Small-World Network** apabila memenuhi dua syarat empiris:
+    1. **Klasterisasi Lokal Tinggi ($C \gg C_{random}$):** Halaman-halaman membentuk kelompok subtopik yang rapat.
+    2. **Rerata Lintasan Pendek ($L \approx L_{random}$):** Setiap halaman dapat dijangkau hanya dalam sedikit lompatan klik.
+    """)
+    
+    col_sw1, col_sw2 = st.columns(2)
+    with col_sw1:
+        st.markdown("#### PARAMETER EMPIRIS:")
+        st.write(f"- **Koefisien Klasterisasi Aktual ($C$):** `{clustering_coeff:.4f}`")
+        st.write(f"- **Koefisien Klasterisasi Graf Acak ($C_{{random}}$):** `{c_random:.4f}`")
+        st.write(f"- **Rasio Penguatan Klaster ($C / C_{{random}}$):** `{clustering_ratio:.2f}x`")
+        st.write(f"- **Rata-rata Jarak Terpendek ($L$):** `{avg_path_len:.2f} hops`")
+        
+        if clustering_ratio > 1.5:
+            st.success("STATUS: TERVERIFIKASI SMALL-WORLD NETWORK (Rasio klasterisasi jauh melampaui jaringan acak).")
+        else:
+            st.info("STATUS: DISTRIBUSI MERATA (Klasterisasi mendekati graf acak atau ukuran sampel terlalu kecil).")
+            
+    with col_sw2:
+        st.markdown("#### TABEL SENTRALITAS JARINGAN:")
+        in_deg_cent = nx.in_degree_centrality(G)
+        betw_cent = nx.betweenness_centrality(G)
+        cent_data = []
+        for r_i, (u_i, p_i) in enumerate(ranking[:6], 1):
+            cent_data.append({
+                'RANK': f"#{r_i:02d}",
+                'HALAMAN': get_page_name(u_i, titles, max_len=24),
+                'PAGERANK': round(p_i, 4),
+                'IN-DEGREE CENT.': round(in_deg_cent[u_i], 4),
+                'BETWEENNESS CENT.': round(betw_cent[u_i], 4)
+            })
+        st.dataframe(pd.DataFrame(cent_data), hide_index=True, use_container_width=True)
+
+
+# ==============================================================================
+# TAB 4: EKSPOR DATA & INTEGRASI SERVER LAB
+# ==============================================================================
+with tab4:
+    st.markdown("#### EKSPOR PAKET DATA UNTUK SERVER LAB")
+    st.write("Unduh berkas keluaran di bawah ini untuk integrasi lebih lanjut pada sistem eksternal.")
+    
+    nodes_export = []
+    node_comms = detect_communities(G)
+    for r, (u, score) in enumerate(ranking, 1):
+        nodes_export.append({
+            'id': u,
+            'name': get_page_name(u, titles, max_len=40),
+            'title': titles.get(u, u),
+            'community_cluster': node_comms.get(u, 0) + 1,
+            'pagerank': round(score, 6),
+            'rank': r,
+            'in_degree': in_degs.get(u, 0),
+            'out_degree': out_degs.get(u, 0)
+        })
+    edges_export = [{'source': s, 'target': t} for s, t in G.edges()]
+    full_export = {
+        'metadata': {
+            'seed_url': seed_url,
+            'network_type': 'Small-World Citation Graph',
+            'total_nodes': N_nodes,
+            'total_edges': E_edges,
+            'clustering_coefficient': round(clustering_coeff, 4),
+            'average_shortest_path_length': round(avg_path_len, 4),
+            'density': round(density_val, 6),
+            'damping_factor': damping_factor
+        },
+        'nodes': nodes_export,
+        'edges': edges_export
+    }
+    json_str = json.dumps(full_export, indent=2, ensure_ascii=False)
+    csv_str = df_top10.to_csv(index=False)
+    
+    col_d1, col_d2, col_d3 = st.columns(3)
+    with col_d1:
+        st.download_button(
+            label="UNDUH JSON GRAF & PAGERANK",
+            data=json_str,
+            file_name="graph_pagerank.json",
+            mime="application/json",
+            use_container_width=True
+        )
+    with col_d2:
+        st.download_button(
+            label="UNDUH CSV TOP-10 PAGERANK",
+            data=csv_str,
+            file_name="top10_pagerank.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    with col_d3:
+        st.download_button(
+            label="UNDUH HTML CITATION GRAPH",
+            data=html_graph,
+            file_name="citation_graph.html",
+            mime="text/html",
+            use_container_width=True
+        )
+        
+    st.markdown("#### PREVIEW STRUKTUR JSON:")
+    st.code(json.dumps(full_export['nodes'][:2], indent=2), language='json')
