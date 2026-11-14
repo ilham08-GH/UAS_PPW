@@ -31,7 +31,7 @@ st.set_page_config(
 )
 
 # ==============================================================================
-# CUSTOM STYLING: CARDBOARD / KRAFT BOX NEOBRUTALISM (ANTI AI-SLOP)
+# CUSTOM STYLING: CARDBOARD / KRAFT BOX NEOBRUTALISM
 # ==============================================================================
 st.markdown("""
 <style>
@@ -178,7 +178,7 @@ st.markdown("""
         margin-top: 25px;
     }
 
-    /* Override Input, Tombol */
+    /* Override Input & Form Bawaan Streamlit */
     div[data-testid="stTextInput"] input {
         background-color: #f4ece1 !important;
         border: 2px solid #1f1a16 !important;
@@ -198,6 +198,7 @@ st.markdown("""
         box-shadow: 3px 3px 0px #1f1a16 !important;
     }
 
+    /* Tombol Bergaya Neobrutalisme Lakban */
     .stButton > button, .stDownloadButton > button {
         background-color: #b85d38 !important;
         color: #f4ece1 !important;
@@ -216,47 +217,92 @@ st.markdown("""
         background-color: #9e4b2a !important;
     }
 
-    /* ==========================================================
-       PENGATURAN TAB KARTON TEGAS (NEOBRUTALISM STYLE)
-       ========================================================== */
-    div[data-baseweb="tab-list"] {
-        gap: 8px;
+    /* =========================================================================
+       PENGATURAN TAB KARTON TEGAS & BACKGROUND TAB (CARDBOARD NEOBRUTALISM)
+       ========================================================================= */
+    /* Container pembungkus deretan tab */
+    div[data-testid="stTabs"] {
         background-color: transparent !important;
-        border-bottom: none !important;
+        margin-top: 10px !important;
     }
 
-    button[data-baseweb="tab"] {
+    div[data-baseweb="tab-list"] {
+        gap: 8px !important;
+        background-color: transparent !important;
+        border-bottom: none !important;
+        padding-bottom: 0px !important;
+        margin-bottom: -3px !important;
+    }
+
+    /* Hilangkan garis aksen bawaan Streamlit / BaseWeb */
+    div[data-baseweb="tab-highlight"],
+    div[data-baseweb="tab-border"] {
+        display: none !important;
+    }
+
+    /* Tab folder biasa (tidak aktif) */
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"],
+    button[role="tab"] {
         background-color: #d6bc97 !important;
-        border: 2.5px solid #1f1a16 !important;
+        border: 3px solid #1f1a16 !important;
+        border-bottom: 3px solid #1f1a16 !important;
         border-radius: 0px !important;
-        box-shadow: 3px 3px 0px #1f1a16 !important;
-        padding: 10px 16px !important;
+        box-shadow: 4px 4px 0px #1f1a16 !important;
+        padding: 10px 18px !important;
         font-family: 'Space Mono', monospace !important;
         font-weight: 700 !important;
         color: #1f1a16 !important;
+        margin-right: 6px !important;
+        margin-bottom: 0px !important;
         transition: all 0.1s ease !important;
     }
 
-    button[data-baseweb="tab"]:hover {
-        background-color: #c4a982 !important;
-        transform: translate(-1px, -1px);
-        box-shadow: 4px 4px 0px #1f1a16 !important;
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"] p,
+    button[role="tab"] p,
+    button[data-baseweb="tab"] div {
+        font-family: 'Space Mono', monospace !important;
+        font-weight: 700 !important;
+        color: #1f1a16 !important;
+        font-size: 0.88rem !important;
+        margin: 0 !important;
     }
 
-    button[data-baseweb="tab"][aria-selected="true"] {
+    /* Hover tab */
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover,
+    button[role="tab"]:hover {
+        background-color: #cbb08a !important;
+        transform: translate(-1px, -1px) !important;
+        box-shadow: 5px 5px 0px #1f1a16 !important;
+    }
+
+    /* Tab aktif: warna krem (#f4ece1) menyatu rapat dengan kotak panel di bawahnya */
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"],
+    button[role="tab"][aria-selected="true"] {
         background-color: #f4ece1 !important;
-        color: #b85d38 !important;
-        border-bottom: 2.5px solid #f4ece1 !important;
-        box-shadow: 4px 4px 0px #1f1a16 !important;
-        transform: translate(-2px, -2px);
+        border: 3px solid #1f1a16 !important;
+        border-bottom: 3px solid #f4ece1 !important;
+        box-shadow: 4px -2px 0px #1f1a16 !important;
+        transform: translateY(3px) !important;
+        z-index: 10 !important;
     }
 
-    div[data-testid="stTabs"] > div[role="tabpanel"] {
-        background-color: #f4ece1;
-        border: 3px solid #1f1a16;
-        box-shadow: 7px 7px 0px #1f1a16;
-        padding: 24px;
-        margin-top: -2px;
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p,
+    button[role="tab"][aria-selected="true"] p,
+    button[data-baseweb="tab"][aria-selected="true"] div {
+        color: #b85d38 !important;
+        font-weight: 800 !important;
+    }
+
+    /* BACKGROUND ISI TAB / TABPANEL (KOTAK KARDUS ISI) */
+    div[data-testid="stTabs"] div[role="tabpanel"],
+    div[data-testid="stTabs"] div[data-baseweb="tab-panel"],
+    div[data-testid="stTabsContent"],
+    div[data-baseweb="tab-panel"] {
+        background-color: #f4ece1 !important;
+        border: 3px solid #1f1a16 !important;
+        box-shadow: 7px 7px 0px #1f1a16 !important;
+        padding: 24px 22px !important;
+        margin-top: 0px !important;
     }
 
     label, .stMarkdown p, .stMarkdown li {
@@ -276,6 +322,7 @@ st.markdown("""
 # FUNGSI PAGERANK ROBUST (BEBAS ERROR SCIPY)
 # ==============================================================================
 def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
+    """Menghitung PageRank dengan NetworkX, fallback otomatis ke Power Iteration murni jika SciPy absen."""
     try:
         return nx.pagerank(G, alpha=alpha, max_iter=max_iter, tol=tol)
     except Exception:
@@ -299,15 +346,25 @@ def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
 
 
 # ==============================================================================
-# DETEKSI KOMUNITAS
+# DETEKSI KOMUNITAS (PALET TINTA CETAK INDUSTRIAL DI ATAS KARDUS)
 # ==============================================================================
 COMMUNITY_PALETTE = [
-    '#b85d38', '#3b6e5c', '#d48c29', '#2f5266',
-    '#8c3f4d', '#6b5b3e', '#4a6b82', '#a35c37',
-    '#526b44', '#7a496b', '#9c6b30', '#3d5a58'
+    '#b85d38',  # Rust Terracotta
+    '#3b6e5c',  # Industrial Forest Green
+    '#d48c29',  # Mustard Ochre
+    '#2f5266',  # Slate Petrol
+    '#8c3f4d',  # Faded Crimson
+    '#6b5b3e',  # Olive Bark
+    '#4a6b82',  # Steel Blue
+    '#a35c37',  # Burnt Sienna
+    '#526b44',  # Moss Stamp
+    '#7a496b',  # Vintage Plum
+    '#9c6b30',  # Raw Umber
+    '#3d5a58'   # Deep Teal
 ]
 
 def detect_communities(G):
+    """Deteksi komunitas/klaster simpul menggunakan algoritma Louvain atau Modularity."""
     G_undir = G.to_undirected()
     if G_undir.number_of_nodes() == 0:
         return {}
@@ -330,6 +387,7 @@ def detect_communities(G):
 # FUNGSI HELPER: NAMA HALAMAN DESKRIPTIF & BERSIH
 # ==============================================================================
 def get_page_name(url, page_titles=None, max_len=30):
+    """Menghasilkan nama halaman manusiawi dari <title>, subdomain, atau slug path yang bersih."""
     parsed = urlparse(url)
     if page_titles and url in page_titles:
         title = str(page_titles[url]).strip()
@@ -344,6 +402,7 @@ def get_page_name(url, page_titles=None, max_len=30):
             
     netloc = parsed.netloc.replace('www.', '')
     path = parsed.path.strip('/')
+    
     netloc_parts = netloc.split('.')
     subdomain = netloc_parts[0] if len(netloc_parts) > 2 else ""
     
@@ -363,7 +422,7 @@ def get_page_name(url, page_titles=None, max_len=30):
 
 
 # ==============================================================================
-# KELAS WEB CRAWLER ROBUST
+# KELAS WEB CRAWLER ROBUST (SESSION, RETRY, TIMEOUT PANJANG & FILTER 404)
 # ==============================================================================
 class WebCrawler:
     def __init__(self, seed_url, max_pages=30, delay=0.4, timeout=16, allowed_domains=None):
@@ -418,6 +477,7 @@ class WebCrawler:
             return False
 
     def _fetch(self, url):
+        """Mengambil halaman dengan toleransi SSL dan fallback HTTP jika HTTPS bermasalah."""
         try:
             return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=True)
         except requests.exceptions.SSLError:
@@ -439,9 +499,11 @@ class WebCrawler:
                 continue
             try:
                 response = self._fetch(current_url)
+                
                 if response.status_code != 200:
                     self.failed_urls.append((current_url, f"HTTP {response.status_code}"))
                     continue
+                    
                 if 'text/html' not in response.headers.get('Content-Type', ''):
                     continue
                 
@@ -490,12 +552,16 @@ class WebCrawler:
 
 
 # ==============================================================================
-# FUNGSI MEMBANGUN CITATION GRAPH
+# FUNGSI MEMBANGUN CITATION GRAPH BERGAYA KERTAS KARDUS (TENANG & STATIS)
 # ==============================================================================
 def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url,
                                     color_mode="Klaster Komunitas (Connected Papers)",
                                     size_multiplier=1.0, spring_spacing=100,
                                     show_all_labels=False, freeze_physics=True):
+    """
+    Menghasilkan graf interaktif di atas kanvas kertas unbleached (#f4ece1)
+    dengan border hitam tegas ala potongan pin kardus dan penguncian statis anti-gerak.
+    """
     net = Network(height='720px', width='100%', directed=True,
                   bgcolor='#f4ece1', font_color='#1f1a16', cdn_resources='remote')
     
@@ -519,6 +585,7 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
     for node in G.nodes():
         pr_val = pr_scores.get(node, 0)
         norm_val = (pr_val - min_pr) / denom
+        
         node_size = (14 + (norm_val ** 0.8) * 45) * size_multiplier
         
         title_full = page_titles.get(node, node)
@@ -528,20 +595,24 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
         rank_str = f"RANK #{rank_pos[0]}" if rank_pos else ""
         comm_id = node_communities.get(node, 0)
 
-        if node == top1_node or node == seed_url:
+        is_top_or_seed = (node == top1_node or node == seed_url)
+        if is_top_or_seed:
             node_color = '#1f1a16'
             border_color = '#b85d38'
+            font_color = '#f4ece1'
         elif color_mode == "Klaster Komunitas (Connected Papers)":
             node_color = COMMUNITY_PALETTE[comm_id % len(COMMUNITY_PALETTE)]
             border_color = '#1f1a16'
+            font_color = '#1f1a16'
         else:
             r = int(214 - norm_val * 120)
             g = int(188 - norm_val * 115)
             b = int(151 - norm_val * 110)
             node_color = f'rgb({r}, {g}, {b})'
             border_color = '#1f1a16'
+            font_color = '#1f1a16'
 
-        if show_all_labels or node in top_nodes or node == top1_node:
+        if show_all_labels or node in top_nodes or is_top_or_seed:
             node_label = name_short
         else:
             node_label = ""
@@ -565,7 +636,7 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
             color={'background': node_color, 'border': border_color, 'highlight': {'background': '#b85d38', 'border': '#1f1a16'}},
             borderWidth=2.5,
             borderWidthSelected=4,
-            font={'size': 11, 'color': '#1f1a16', 'face': 'Space Mono, monospace', 'strokeWidth': 3, 'strokeColor': '#f4ece1'}
+            font={'size': 11, 'color': font_color, 'face': 'Space Mono, monospace', 'strokeWidth': 3, 'strokeColor': '#1f1a16' if is_top_or_seed else '#f4ece1'}
         )
 
     for source, target in G.edges():
@@ -591,6 +662,9 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
         network.once("stabilizationIterationsDone", function() {
             network.setOptions({ physics: false });
         });
+        setTimeout(function() {
+            network.setOptions({ physics: false });
+        }, 1200);
         """
         html_out = html_out.replace("return network;", f"{freeze_script}\n        return network;")
 
@@ -598,10 +672,12 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
 
 
 # ==============================================================================
-# HEADER UTAMA
+# HEADER UTAMA (KOTAK KARDUS DENGAN LAKBAN)
 # ==============================================================================
 st.markdown("""
-<div class='cardboard-header' style='text-align: center;'><div class='main-title'>[ NodeCraft ]</div></div>
+<div class='cardboard-header' style='text-align: center;'>
+    <div class='main-title'>[ NodeCraft ]</div>
+</div>
 """, unsafe_allow_html=True)
 
 
@@ -695,10 +771,11 @@ if crawl_btn:
                 'seed': raw_seed,
                 'failed_count': len(crawler.failed_urls)
             }
+            st.success(f"CRAWLING SELESAI // {G_crawled.number_of_nodes()} simpul berhasil dipetakan.")
 
 
 # ==============================================================================
-# TAMPILAN AWAL JIKA BELUM ADA DATA (EMPTY STATE)
+# TAMPILAN AWAL JIKA BELUM ADA DATA (EMPTY STATE KARDUS)
 # ==============================================================================
 if st.session_state.graph_data is None:
     st.markdown("""
@@ -749,9 +826,11 @@ best_node = ranking[0][0] if ranking else seed_url
 best_title = get_page_name(best_node, titles, max_len=22)
 best_pr = ranking[0][1] if ranking else 0.0
 
+# Inisialisasi awal variabel graf agar aman di semua tab
+html_graph = ""
 
 # ==============================================================================
-# DASHBOARD METRIC CARDS
+# DASHBOARD METRIC CARDS (POTONGAN KARTON)
 # ==============================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 col1, col2, col3, col4, col5 = st.columns(5)
@@ -795,7 +874,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 
 # ==============================================================================
-# TABS NAVIGASI
+# TABS NAVIGASI (FOLDER KARTON)
 # ==============================================================================
 tab1, tab2, tab3, tab4 = st.tabs([
     "01 // CITATION GRAPH",
@@ -891,12 +970,13 @@ with tab2:
             
         ax.grid(axis='x', linestyle='--', color='#8c7a66', alpha=0.6)
         
+        max_val = max(plot_scores) if (plot_scores and max(plot_scores) > 0) else 1.0
         for bar in bars:
             w = bar.get_width()
-            ax.text(w + (max(plot_scores) * 0.015), bar.get_y() + bar.get_height() / 2, f"{w:.4f}",
+            ax.text(w + (max_val * 0.015), bar.get_y() + bar.get_height() / 2, f"{w:.4f}",
                     va='center', fontsize=8.5, fontweight='bold', family='monospace', color='#1f1a16')
                     
-        ax.set_xlim(0, max(plot_scores) * 1.15)
+        ax.set_xlim(0, max_val * 1.15)
         plt.tight_layout()
         st.pyplot(fig)
 
@@ -983,7 +1063,7 @@ with tab4:
     with col_d1:
         st.download_button(
             label="UNDUH JSON GRAF & PAGERANK",
-            data=json_str,
+            data=json_str.encode('utf-8'),
             file_name="graph_pagerank.json",
             mime="application/json",
             use_container_width=True
@@ -991,7 +1071,7 @@ with tab4:
     with col_d2:
         st.download_button(
             label="UNDUH CSV TOP-10 PAGERANK",
-            data=csv_str,
+            data=csv_str.encode('utf-8'),
             file_name="top10_pagerank.csv",
             mime="text/csv",
             use_container_width=True
@@ -999,7 +1079,7 @@ with tab4:
     with col_d3:
         st.download_button(
             label="UNDUH HTML CITATION GRAPH",
-            data=html_graph,
+            data=html_graph.encode('utf-8') if isinstance(html_graph, str) else html_graph,
             file_name="citation_graph.html",
             mime="text/html",
             use_container_width=True
