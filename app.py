@@ -557,9 +557,6 @@ if crawl_btn:
                 'failed_count': len(crawler.failed_urls)
             }
             msg = f"✅ Crawling berhasil! {G_crawled.number_of_nodes()} simpul dan {G_crawled.number_of_edges()} busur berhasil dihubungkan."
-            if crawler.failed_urls:
-                msg += f.""
-            st.success(msg)
 
 
 # ==============================================================================
