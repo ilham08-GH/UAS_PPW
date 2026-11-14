@@ -24,7 +24,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # KONFIGURASI HALAMAN STREAMLIT (TANPA SIDEBAR, FULL-WIDTH)
 # ==============================================================================
 st.set_page_config(
-    page_title="Citation Graph & Small-World Web Explorer",
+    page_title="NODECRAFT",
     page_icon="📦",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -876,11 +876,9 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==============================================================================
 # TABS NAVIGASI (FOLDER KARTON)
 # ==============================================================================
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2 = st.tabs([
     "01 // CITATION GRAPH",
-    "02 // TOP-10 PAGERANK",
-    "03 // SMALL-WORLD ANALYSIS",
-    "04 // EKSPOR DATA LAB"
+    "02 // TOP-10 PAGERANK"
 ])
 
 
@@ -979,111 +977,6 @@ with tab2:
         ax.set_xlim(0, max_val * 1.15)
         plt.tight_layout()
         st.pyplot(fig)
-
-
-# ==============================================================================
-# TAB 3: ANALISIS SIFAT SMALL-WORLD
-# ==============================================================================
-with tab3:
-    st.markdown("#### PENGUJIAN TOPOLOGI SMALL-WORLD (WATTS & STROGATZ, 1998)")
-    st.markdown(r"""
-    Sebuah jaringan memenuhi kriteria **Small-World Network** apabila memenuhi dua syarat empiris:
-    1. **Klasterisasi Lokal Tinggi ($C \gg C_{random}$):** Halaman-halaman membentuk kelompok subtopik yang rapat.
-    2. **Rerata Lintasan Pendek ($L \approx L_{random}$):** Setiap halaman dapat dijangkau hanya dalam sedikit lompatan klik.
-    """)
-    
-    col_sw1, col_sw2 = st.columns(2)
-    with col_sw1:
-        st.markdown("#### PARAMETER EMPIRIS:")
-        st.write(f"- **Koefisien Klasterisasi Aktual ($C$):** `{clustering_coeff:.4f}`")
-        st.write(f"- **Koefisien Klasterisasi Graf Acak ($C_{{random}}$):** `{c_random:.4f}`")
-        st.write(f"- **Rasio Penguatan Klaster ($C / C_{{random}}$):** `{clustering_ratio:.2f}x`")
-        st.write(f"- **Rata-rata Jarak Terpendek ($L$):** `{avg_path_len:.2f} hops`")
-        
-        if clustering_ratio > 1.5:
-            st.success("STATUS: TERVERIFIKASI SMALL-WORLD NETWORK (Rasio klasterisasi jauh melampaui jaringan acak).")
-        else:
-            st.info("STATUS: DISTRIBUSI MERATA (Klasterisasi mendekati graf acak atau ukuran sampel terlalu kecil).")
-            
-    with col_sw2:
-        st.markdown("#### TABEL SENTRALITAS JARINGAN:")
-        in_deg_cent = nx.in_degree_centrality(G)
-        betw_cent = nx.betweenness_centrality(G)
-        cent_data = []
-        for r_i, (u_i, p_i) in enumerate(ranking[:6], 1):
-            cent_data.append({
-                'RANK': f"#{r_i:02d}",
-                'HALAMAN': get_page_name(u_i, titles, max_len=24),
-                'PAGERANK': round(p_i, 4),
-                'IN-DEGREE CENT.': round(in_deg_cent[u_i], 4),
-                'BETWEENNESS CENT.': round(betw_cent[u_i], 4)
-            })
-        st.dataframe(pd.DataFrame(cent_data), hide_index=True, use_container_width=True)
-
-
-# ==============================================================================
-# TAB 4: EKSPOR DATA & INTEGRASI SERVER LAB
-# ==============================================================================
-with tab4:
-    st.markdown("#### EKSPOR PAKET DATA UNTUK SERVER LAB")
-    st.write("Unduh berkas keluaran di bawah ini untuk integrasi lebih lanjut pada sistem eksternal.")
-    
-    nodes_export = []
-    node_comms = detect_communities(G)
-    for r, (u, score) in enumerate(ranking, 1):
-        nodes_export.append({
-            'id': u,
-            'name': get_page_name(u, titles, max_len=40),
-            'title': titles.get(u, u),
-            'community_cluster': node_comms.get(u, 0) + 1,
-            'pagerank': round(score, 6),
-            'rank': r,
-            'in_degree': in_degs.get(u, 0),
-            'out_degree': out_degs.get(u, 0)
-        })
-    edges_export = [{'source': s, 'target': t} for s, t in G.edges()]
-    full_export = {
-        'metadata': {
-            'seed_url': seed_url,
-            'network_type': 'Small-World Citation Graph',
-            'total_nodes': N_nodes,
-            'total_edges': E_edges,
-            'clustering_coefficient': round(clustering_coeff, 4),
-            'average_shortest_path_length': round(avg_path_len, 4),
-            'density': round(density_val, 6),
-            'damping_factor': damping_factor
-        },
-        'nodes': nodes_export,
-        'edges': edges_export
-    }
-    json_str = json.dumps(full_export, indent=2, ensure_ascii=False)
-    csv_str = df_top10.to_csv(index=False)
-    
-    col_d1, col_d2, col_d3 = st.columns(3)
-    with col_d1:
-        st.download_button(
-            label="UNDUH JSON GRAF & PAGERANK",
-            data=json_str.encode('utf-8'),
-            file_name="graph_pagerank.json",
-            mime="application/json",
-            use_container_width=True
-        )
-    with col_d2:
-        st.download_button(
-            label="UNDUH CSV TOP-10 PAGERANK",
-            data=csv_str.encode('utf-8'),
-            file_name="top10_pagerank.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-    with col_d3:
-        st.download_button(
-            label="UNDUH HTML CITATION GRAPH",
-            data=html_graph.encode('utf-8') if isinstance(html_graph, str) else html_graph,
-            file_name="citation_graph.html",
-            mime="text/html",
-            use_container_width=True
-        )
         
     st.markdown("#### PREVIEW STRUKTUR JSON:")
     st.code(json.dumps(full_export['nodes'][:2], indent=2), language='json')
