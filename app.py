@@ -15,18 +15,29 @@ import streamlit.components.v1 as components
 from pyvis.network import Network
 
 # ==============================================================================
-# KONFIGURASI HALAMAN STREAMLIT
+# KONFIGURASI HALAMAN STREAMLIT (TANPA SIDEBAR)
 # ==============================================================================
 st.set_page_config(
     page_title="Web Structure Mining - Citation Graph & PageRank",
     page_icon="🌐",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Custom Styling (CSS)
+# Custom Styling (CSS) - Hapus & sembunyikan sidebar sepenuhnya
 st.markdown("""
 <style>
+    /* Sembunyikan sidebar dan tombol panah toggle */
+    [data-testid="stSidebar"], 
+    [data-testid="stSidebarNav"], 
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    
+    .block-container {
+        padding-top: 1.8rem;
+        padding-bottom: 2.5rem;
+    }
     .main-title {
         font-size: 2.2rem;
         font-weight: 800;
@@ -36,6 +47,17 @@ st.markdown("""
     .sub-title {
         font-size: 1.05rem;
         color: #4b5563;
+        margin-bottom: 0.8rem;
+    }
+    .author-badge {
+        display: inline-block;
+        background-color: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1d4ed8;
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 0.85rem;
+        font-weight: 600;
         margin-bottom: 1.2rem;
     }
     .metric-card {
@@ -56,15 +78,44 @@ st.markdown("""
         color: #64748b;
         font-weight: 600;
     }
-    .badge-top1 {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        color: white;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-weight: bold;
-    }
 </style>
 """, unsafe_allow_html=True)
+
+
+# ==============================================================================
+# FUNGSI PAGERANK ROBUST (BEBAS ERROR SCIPY)
+# ==============================================================================
+def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
+    """
+    Menghitung PageRank dengan NetworkX.
+    Jika SciPy tidak terpasang di server, otomatis fallback ke algoritma
+    Power Iteration murni berbasis Python/NumPy agar aplikasi tidak pernah crash.
+    """
+    try:
+        return nx.pagerank(G, alpha=alpha, max_iter=max_iter, tol=tol)
+    except Exception:
+        # Fallback manual iteratif (100% bebas SciPy)
+        nodes = list(G.nodes())
+        N = len(nodes)
+        if N == 0:
+            return {}
+            
+        pr = {n: 1.0 / N for n in nodes}
+        for _ in range(max_iter):
+            pr_new = {}
+            # Hitung dangling nodes (simpul tanpa link keluar)
+            dangling_sum = sum(pr[n] for n in nodes if G.out_degree(n) == 0)
+            dangling_contrib = alpha * dangling_sum / N
+            
+            for v in nodes:
+                in_sum = sum(pr[u] / G.out_degree(u) for u in G.predecessors(v) if G.out_degree(u) > 0)
+                pr_new[v] = (1.0 - alpha) / N + alpha * in_sum + dangling_contrib
+                
+            diff = sum(abs(pr_new[n] - pr[n]) for n in nodes)
+            pr = pr_new
+            if diff < tol:
+                break
+        return pr
 
 
 # ==============================================================================
@@ -280,35 +331,42 @@ def get_sample_utm_graph():
 
 
 # ==============================================================================
-# SIDEBAR KONTROL
+# HEADER UTAMA
 # ==============================================================================
-st.sidebar.image("https://img.icons8.com/color/96/network-mesh.png", width=64)
-st.sidebar.title("Pengaturan Sistem")
+st.markdown("<div class='main-title'>🌐 Web Structure Mining — Citation Graph & PageRank</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>Visualisasi Topologi Hyperlink Web, Analisis Sentralitas, dan Identifikasi Halaman Web Terpenting</div>", unsafe_allow_html=True)
+st.markdown("<div class='author-badge'>👤 Muhammad Ilham Adila Almafaz (NIM: 230411100113) — Teknik Informatika UTM</div>", unsafe_allow_html=True)
 
-source_mode = st.sidebar.radio(
-    "Sumber Data:",
-    ["🧪 Data Demo (UTM Sample)", "🕷️ Crawl Langsung (Live)", "📂 Load File Tersimpan"],
-    index=0
-)
 
-damping_factor = st.sidebar.slider("Damping Factor (d):", 0.10, 0.99, 0.85, 0.05)
+# ==============================================================================
+# PANEL PENGATURAN DI DALAM HALAMAN UTAMA (EXPANDER)
+# ==============================================================================
+with st.expander("⚙️ Panel Pengaturan & Sumber Data", expanded=True):
+    col_set1, col_set2 = st.columns([2, 1])
+    with col_set1:
+        source_mode = st.radio(
+            "Pilih Sumber Data:",
+            ["🧪 Data Demo (UTM Sample)", "🕷️ Crawl Langsung (Live)", "📂 Load File Tersimpan"],
+            horizontal=True
+        )
+    with col_set2:
+        damping_factor = st.slider("Damping Factor (d):", 0.10, 0.99, 0.85, 0.05)
 
-if source_mode == "🕷️ Crawl Langsung (Live)":
-    seed_url_input = st.sidebar.text_input("Seed URL:", "https://www.trunojoyo.ac.id")
-    max_pages_input = st.sidebar.slider("Maksimal Halaman:", 10, 80, 25, 5)
-    delay_input = st.sidebar.slider("Jeda Request (detik):", 0.2, 2.0, 0.8, 0.1)
-    domain_filter = st.sidebar.text_input("Filter Domain:", "trunojoyo.ac.id")
-    crawl_btn = st.sidebar.button("🚀 Mulai Crawling & Analisis", type="primary")
-else:
-    crawl_btn = False
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-**👤 Pengembang:**  
-Muhammad Ilham Adila Almafaz  
-*(NIM: 230411100113 - UTM)*  
-Mata Kuliah: **PPW (Web Mining)**
-""")
+    if source_mode == "🕷️ Crawl Langsung (Live)":
+        st.markdown("---")
+        col_c1, col_c2, col_c3, col_c4 = st.columns([3, 2, 2, 2])
+        with col_c1:
+            seed_url_input = st.text_input("Seed URL:", "https://www.trunojoyo.ac.id")
+        with col_c2:
+            domain_filter = st.text_input("Filter Domain:", "trunojoyo.ac.id")
+        with col_c3:
+            max_pages_input = st.slider("Maks Halaman:", 10, 80, 25, 5)
+        with col_c4:
+            delay_input = st.slider("Jeda Request (s):", 0.2, 2.0, 0.8, 0.1)
+            
+        crawl_btn = st.button("🚀 Mulai Crawling & Analisis", type="primary", use_container_width=True)
+    else:
+        crawl_btn = False
 
 
 # ==============================================================================
@@ -342,9 +400,9 @@ elif source_mode == "📂 Load File Tersimpan":
             'titles': titles_saved,
             'seed': saved.get('metadata', {}).get('seed_url', '-')
         }
-        st.sidebar.success(f"Berhasil memuat {G_saved.number_of_nodes()} simpul dari {json_path}")
+        st.success(f"Berhasil memuat {G_saved.number_of_nodes()} simpul dari {json_path}")
     else:
-        st.sidebar.warning(f"File {json_path} belum ditemukan. Silakan lakukan crawl terlebih dahulu.")
+        st.warning(f"File {json_path} belum ditemukan. Silakan lakukan crawl terlebih dahulu.")
 
 elif source_mode == "🕷️ Crawl Langsung (Live)" and crawl_btn:
     crawler = WebCrawler(
@@ -380,21 +438,18 @@ elif source_mode == "🕷️ Crawl Langsung (Live)" and crawl_btn:
 
 
 # ==============================================================================
-# TAMPILAN DASHBOARD UTAMA
+# TAMPILAN DASHBOARD
 # ==============================================================================
-st.markdown("<div class='main-title'>🌐 Web Structure Mining — Citation Graph & PageRank</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>Visualisasi Topologi Hyperlink Web, Analisis Sentralitas, dan Identifikasi Halaman Web Terpenting</div>", unsafe_allow_html=True)
-
 if st.session_state.graph_data is None:
-    st.info("👈 Silakan pilih sumber data pada sidebar di sebelah kiri untuk memulai eksplorasi.")
+    st.info("Silakan pilih sumber data di atas untuk memulai.")
     st.stop()
 
 G = st.session_state.graph_data['G']
 titles = st.session_state.graph_data['titles']
 seed_url = st.session_state.graph_data['seed']
 
-# Hitung PageRank
-pr_scores = nx.pagerank(G, alpha=damping_factor)
+# Hitung PageRank menggunakan fungsi yang aman dari error SciPy
+pr_scores = compute_pagerank(G, alpha=damping_factor)
 ranking = sorted(pr_scores.items(), key=lambda x: x[1], reverse=True)
 
 # Hitung Metrik Lainnya
@@ -549,7 +604,6 @@ with tab4:
     st.markdown("### 💾 Ekspor Hasil untuk Deployment Server Lab")
     st.info("File-file di bawah ini siap disetor atau diintegrasikan dengan backend server lab (Flask / FastAPI / D3.js).")
     
-    # 1. Prepare JSON Export
     nodes_export = []
     for r, (u, score) in enumerate(ranking, 1):
         nodes_export.append({
@@ -604,4 +658,3 @@ with tab4:
         
     st.markdown("#### Preview Struktur JSON:")
     st.code(json.dumps(full_export['nodes'][:2], indent=2), language='json')
-
