@@ -164,15 +164,19 @@ def get_page_name(url, page_titles=None, max_len=30):
     parsed = urlparse(url)
     if page_titles and url in page_titles:
         title = str(page_titles[url]).strip()
-        for suffix in ['- Universitas Trunojoyo Madura', '| Universitas Trunojoyo Madura', '- UTM', '| UTM']:
-            if suffix in title:
-                title = title.replace(suffix, '').strip()
+        for sep in [' - ', ' | ', ' — ']:
+            if sep in title:
+                parts = title.split(sep)
+                if len(parts[0]) > 3:
+                    title = parts[0].strip()
         if title and title != '-' and title != url and not title.startswith('http'):
             return title[:max_len]
             
     netloc = parsed.netloc.replace('www.', '')
-    subdomain = netloc.replace('.trunojoyo.ac.id', '').replace('trunojoyo.ac.id', '')
     path = parsed.path.strip('/')
+    
+    netloc_parts = netloc.split('.')
+    subdomain = netloc_parts[0] if len(netloc_parts) > 2 else ""
     
     if path:
         last_slug = path.split('/')[-1]
@@ -182,25 +186,27 @@ def get_page_name(url, page_titles=None, max_len=30):
     else:
         if subdomain:
             return f"[{subdomain}] Beranda"[:max_len]
-        return "Beranda Utama (UTM)"
+        return f"Beranda ({netloc})"[:max_len]
 
 
 # ==============================================================================
 # KELAS WEB CRAWLER (BFS)
 # ==============================================================================
 class WebCrawler:
-    def __init__(self, seed_url, max_pages=35, delay=0.7, allowed_domains=None):
+    def __init__(self, seed_url, max_pages=30, delay=0.5, allowed_domains=None):
         self.seed_url = seed_url
         self.max_pages = max_pages
         self.delay = delay
         parsed = urlparse(seed_url)
-        self.seed_domain = parsed.netloc
+        self.seed_domain = parsed.netloc.replace('www.', '')
         self.allowed_domains = allowed_domains or [self.seed_domain]
         self.visited = set()
         self.edges = []
         self.page_titles = {}
         self.failed_urls = []
-        self.headers = {'User-Agent': 'Mozilla/5.0 (Educational WebMining-Bot/UTM)'}
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (Educational WebMining-Bot)'
+        }
         
     def _normalize_url(self, url):
         parsed = urlparse(url)
@@ -214,7 +220,7 @@ class WebCrawler:
                 return False
             if not any(d in parsed.netloc for d in self.allowed_domains):
                 return False
-            skip_ext = ('.pdf', '.jpg', '.png', '.gif', '.zip', '.docx', '.xlsx', '.css', '.js')
+            skip_ext = ('.pdf', '.jpg', '.png', '.gif', '.zip', '.docx', '.xlsx', '.css', '.js', '.svg', '.mp4')
             if parsed.path.lower().endswith(skip_ext):
                 return False
             return True
@@ -376,136 +382,6 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
 
 
 # ==============================================================================
-# SAMPLE DATA DEMO: SMALL-WORLD NETWORK (UTM CLUSTERS)
-# ==============================================================================
-def get_sample_utm_graph():
-    """Menyediakan graf sampel 24 simpul yang merefleksikan sifat Small-World Network kampus UTM."""
-    nodes = [
-        # Pusat Utama
-        'https://www.trunojoyo.ac.id',
-        'https://www.trunojoyo.ac.id/visimisi',
-        'https://www.trunojoyo.ac.id/sejarah-singkat-utm',
-        'https://www.trunojoyo.ac.id/profil-pimpinan',
-        
-        # Klaster 1: Fakultas Teknik (FT)
-        'https://ft.trunojoyo.ac.id',
-        'https://ft.trunojoyo.ac.id/informatika',
-        'https://ft.trunojoyo.ac.id/sistem-informasi',
-        'https://ft.trunojoyo.ac.id/teknik-elektro',
-        'https://ft.trunojoyo.ac.id/laboratorium-komputasi',
-        
-        # Klaster 2: Penelitian & Pengabdian (LPPM)
-        'https://lppm.trunojoyo.ac.id',
-        'https://lppm.trunojoyo.ac.id/jurnal-ilmiah',
-        'https://lppm.trunojoyo.ac.id/penelitian-dan-pengabdian',
-        'https://lppm.trunojoyo.ac.id/haki-dan-paten',
-        
-        # Klaster 3: Layanan Akademik & Mahasiswa (BAA & SIAKAD)
-        'https://siakad.trunojoyo.ac.id',
-        'https://baa.trunojoyo.ac.id',
-        'https://baa.trunojoyo.ac.id/kalender-akademik',
-        'https://baa.trunojoyo.ac.id/registrasi-mahasiswa',
-        'https://library.trunojoyo.ac.id',
-        
-        # Klaster 4: Fakultas Ekonomi & Bisnis (FEB)
-        'https://feb.trunojoyo.ac.id',
-        'https://feb.trunojoyo.ac.id/akuntansi',
-        'https://feb.trunojoyo.ac.id/manajemen',
-        'https://feb.trunojoyo.ac.id/ekonomi-pembangunan',
-        
-        # Klaster 5: Berita & Prestasi Kampus
-        'https://www.trunojoyo.ac.id/berita-prestasi-mahasiswa-nasional',
-        'https://www.trunojoyo.ac.id/pendidikan-berdampak-kampus'
-    ]
-    
-    titles = {
-        'https://www.trunojoyo.ac.id': 'Beranda - Universitas Trunojoyo Madura',
-        'https://www.trunojoyo.ac.id/visimisi': 'Visi & Misi Universitas Trunojoyo Madura',
-        'https://www.trunojoyo.ac.id/sejarah-singkat-utm': 'Sejarah Singkat Pendirian UTM',
-        'https://www.trunojoyo.ac.id/profil-pimpinan': 'Profil Rektorat & Pimpinan Universitas',
-        'https://ft.trunojoyo.ac.id': 'Fakultas Teknik UTM',
-        'https://ft.trunojoyo.ac.id/informatika': 'Program Studi Teknik Informatika',
-        'https://ft.trunojoyo.ac.id/sistem-informasi': 'Program Studi Sistem Informasi',
-        'https://ft.trunojoyo.ac.id/teknik-elektro': 'Program Studi Teknik Elektro',
-        'https://ft.trunojoyo.ac.id/laboratorium-komputasi': 'Laboratorium Rekayasa Perangkat Lunak',
-        'https://lppm.trunojoyo.ac.id': 'Lembaga Penelitian & Pengabdian (LPPM)',
-        'https://lppm.trunojoyo.ac.id/jurnal-ilmiah': 'Portal Jurnal & Publikasi Ilmiah',
-        'https://lppm.trunojoyo.ac.id/penelitian-dan-pengabdian': 'Pusat Riset Unggulan Madura',
-        'https://lppm.trunojoyo.ac.id/haki-dan-paten': 'Sentra KI & Inovasi Teknologi',
-        'https://siakad.trunojoyo.ac.id': 'Sistem Informasi Akademik (SIAKAD)',
-        'https://baa.trunojoyo.ac.id': 'Biro Akademik & Kemahasiswaan (BAA)',
-        'https://baa.trunojoyo.ac.id/kalender-akademik': 'Jadwal & Kalender Akademik',
-        'https://baa.trunojoyo.ac.id/registrasi-mahasiswa': 'Panduan Registrasi Mahasiswa Baru',
-        'https://library.trunojoyo.ac.id': 'Perpustakaan Digital Universitas',
-        'https://feb.trunojoyo.ac.id': 'Fakultas Ekonomi & Bisnis UTM',
-        'https://feb.trunojoyo.ac.id/akuntansi': 'Program Studi Akuntansi',
-        'https://feb.trunojoyo.ac.id/manajemen': 'Program Studi Manajemen',
-        'https://feb.trunojoyo.ac.id/ekonomi-pembangunan': 'Program Studi Ekonomi Pembangunan',
-        'https://www.trunojoyo.ac.id/berita-prestasi-mahasiswa-nasional': 'Prestasi Mahasiswa UTM Tingkat Nasional',
-        'https://www.trunojoyo.ac.id/pendidikan-berdampak-kampus': 'Pendidikan Berdampak Pengabdian'
-    }
-    
-    # Hubungan edges membentuk dense internal clusters + bridge shortcuts (Small-World Network)
-    edges = [
-        # Koneksi Pusat
-        ('https://www.trunojoyo.ac.id', 'https://www.trunojoyo.ac.id/visimisi'),
-        ('https://www.trunojoyo.ac.id', 'https://www.trunojoyo.ac.id/sejarah-singkat-utm'),
-        ('https://www.trunojoyo.ac.id', 'https://www.trunojoyo.ac.id/profil-pimpinan'),
-        ('https://www.trunojoyo.ac.id', 'https://ft.trunojoyo.ac.id'),
-        ('https://www.trunojoyo.ac.id', 'https://lppm.trunojoyo.ac.id'),
-        ('https://www.trunojoyo.ac.id', 'https://siakad.trunojoyo.ac.id'),
-        ('https://www.trunojoyo.ac.id', 'https://feb.trunojoyo.ac.id'),
-        ('https://www.trunojoyo.ac.id', 'https://library.trunojoyo.ac.id'),
-        ('https://www.trunojoyo.ac.id', 'https://baa.trunojoyo.ac.id'),
-        ('https://www.trunojoyo.ac.id', 'https://www.trunojoyo.ac.id/berita-prestasi-mahasiswa-nasional'),
-        
-        # Dense Cluster: Fakultas Teknik
-        ('https://ft.trunojoyo.ac.id', 'https://ft.trunojoyo.ac.id/informatika'),
-        ('https://ft.trunojoyo.ac.id', 'https://ft.trunojoyo.ac.id/sistem-informasi'),
-        ('https://ft.trunojoyo.ac.id', 'https://ft.trunojoyo.ac.id/teknik-elektro'),
-        ('https://ft.trunojoyo.ac.id/informatika', 'https://ft.trunojoyo.ac.id/laboratorium-komputasi'),
-        ('https://ft.trunojoyo.ac.id/sistem-informasi', 'https://ft.trunojoyo.ac.id/laboratorium-komputasi'),
-        ('https://ft.trunojoyo.ac.id/laboratorium-komputasi', 'https://ft.trunojoyo.ac.id'),
-        ('https://ft.trunojoyo.ac.id', 'https://siakad.trunojoyo.ac.id'),  # Shortcut
-        ('https://ft.trunojoyo.ac.id', 'https://www.trunojoyo.ac.id'),
-        
-        # Dense Cluster: LPPM
-        ('https://lppm.trunojoyo.ac.id', 'https://lppm.trunojoyo.ac.id/jurnal-ilmiah'),
-        ('https://lppm.trunojoyo.ac.id', 'https://lppm.trunojoyo.ac.id/penelitian-dan-pengabdian'),
-        ('https://lppm.trunojoyo.ac.id', 'https://lppm.trunojoyo.ac.id/haki-dan-paten'),
-        ('https://lppm.trunojoyo.ac.id/penelitian-dan-pengabdian', 'https://lppm.trunojoyo.ac.id/jurnal-ilmiah'),
-        ('https://lppm.trunojoyo.ac.id/haki-dan-paten', 'https://lppm.trunojoyo.ac.id'),
-        ('https://lppm.trunojoyo.ac.id', 'https://www.trunojoyo.ac.id'),
-        ('https://lppm.trunojoyo.ac.id/jurnal-ilmiah', 'https://library.trunojoyo.ac.id'),  # Shortcut
-        
-        # Dense Cluster: BAA, SIAKAD & Library
-        ('https://baa.trunojoyo.ac.id', 'https://baa.trunojoyo.ac.id/kalender-akademik'),
-        ('https://baa.trunojoyo.ac.id', 'https://baa.trunojoyo.ac.id/registrasi-mahasiswa'),
-        ('https://baa.trunojoyo.ac.id', 'https://siakad.trunojoyo.ac.id'),
-        ('https://siakad.trunojoyo.ac.id', 'https://baa.trunojoyo.ac.id/kalender-akademik'),
-        ('https://library.trunojoyo.ac.id', 'https://siakad.trunojoyo.ac.id'),
-        ('https://siakad.trunojoyo.ac.id', 'https://www.trunojoyo.ac.id'),
-        
-        # Dense Cluster: FEB
-        ('https://feb.trunojoyo.ac.id', 'https://feb.trunojoyo.ac.id/akuntansi'),
-        ('https://feb.trunojoyo.ac.id', 'https://feb.trunojoyo.ac.id/manajemen'),
-        ('https://feb.trunojoyo.ac.id', 'https://feb.trunojoyo.ac.id/ekonomi-pembangunan'),
-        ('https://feb.trunojoyo.ac.id/akuntansi', 'https://feb.trunojoyo.ac.id/manajemen'),
-        ('https://feb.trunojoyo.ac.id', 'https://siakad.trunojoyo.ac.id'),  # Shortcut
-        ('https://feb.trunojoyo.ac.id', 'https://www.trunojoyo.ac.id'),
-        
-        # Berita
-        ('https://www.trunojoyo.ac.id/berita-prestasi-mahasiswa-nasional', 'https://www.trunojoyo.ac.id'),
-        ('https://www.trunojoyo.ac.id/pendidikan-berdampak-kampus', 'https://www.trunojoyo.ac.id')
-    ]
-    
-    G = nx.DiGraph()
-    G.add_nodes_from(nodes)
-    G.add_edges_from(edges)
-    return G, titles
-
-
-# ==============================================================================
 # HEADER UTAMA
 # ==============================================================================
 st.markdown("<div class='main-title'>🕸️ Citation Graph & Small-World Web Explorer</div>", unsafe_allow_html=True)
@@ -514,34 +390,32 @@ st.markdown("<div class='author-badge'>👤 Muhammad Ilham Adila Almafaz (NIM: 2
 
 
 # ==============================================================================
-# PANEL PENGATURAN & SUMBER DATA (COLLAPSIBLE)
+# PANEL PENGATURAN & FORM CRAWLING (DEFAULT KOSONG)
 # ==============================================================================
-with st.expander("⚙️ Panel Pengaturan & Sumber Data", expanded=True):
-    col_set1, col_set2 = st.columns([2, 1])
-    with col_set1:
-        source_mode = st.radio(
-            "Pilih Sumber Data:",
-            ["🧪 Data Demo (UTM Small-World Network)", "🕷️ Crawl Langsung (Live)", "📂 Load File Tersimpan"],
-            horizontal=True
+with st.container():
+    col_c1, col_c2 = st.columns([3, 2])
+    with col_c1:
+        seed_url_input = st.text_input(
+            "🌐 Seed URL Target (Halaman Awal):",
+            value="",
+            placeholder="Masukkan URL, contoh: https://example.com atau https://www.trunojoyo.ac.id"
         )
-    with col_set2:
-        damping_factor = st.slider("Damping Factor (d):", 0.10, 0.99, 0.85, 0.05)
+    with col_c2:
+        domain_filter_input = st.text_input(
+            "🔒 Batasan Domain (Opsional):",
+            value="",
+            placeholder="Kosongkan untuk otomatis menggunakan domain Seed URL"
+        )
 
-    if source_mode == "🕷️ Crawl Langsung (Live)":
-        st.markdown("---")
-        col_c1, col_c2, col_c3, col_c4 = st.columns([3, 2, 2, 2])
-        with col_c1:
-            seed_url_input = st.text_input("Seed URL Target:", "https://www.trunojoyo.ac.id")
-        with col_c2:
-            domain_filter = st.text_input("Filter Domain:", "trunojoyo.ac.id")
-        with col_c3:
-            max_pages_input = st.slider("Maks Halaman:", 10, 80, 30, 5)
-        with col_c4:
-            delay_input = st.slider("Jeda Request (s):", 0.2, 2.0, 0.7, 0.1)
-            
-        crawl_btn = st.button("🚀 Mulai Crawling & Bangun Graf", type="primary", use_container_width=True)
-    else:
-        crawl_btn = False
+    col_p1, col_p2, col_p3 = st.columns([1, 1, 1])
+    with col_p1:
+        max_pages_input = st.slider("Maks Halaman:", min_value=5, max_value=80, value=25, step=5)
+    with col_p2:
+        delay_input = st.slider("Jeda Request (detik):", min_value=0.1, max_value=2.0, value=0.5, step=0.1)
+    with col_p3:
+        damping_factor = st.slider("Damping Factor (d):", min_value=0.10, max_value=0.99, value=0.85, step=0.05)
+
+    crawl_btn = st.button("🚀 Mulai Crawling & Bangun Graf", type="primary", use_container_width=True)
 
 
 # ==============================================================================
@@ -550,75 +424,84 @@ with st.expander("⚙️ Panel Pengaturan & Sumber Data", expanded=True):
 if 'graph_data' not in st.session_state:
     st.session_state.graph_data = None
 
-if source_mode == "🧪 Data Demo (UTM Small-World Network)":
-    G_demo, titles_demo = get_sample_utm_graph()
-    st.session_state.graph_data = {
-        'G': G_demo,
-        'titles': titles_demo,
-        'seed': 'https://www.trunojoyo.ac.id'
-    }
-
-elif source_mode == "📂 Load File Tersimpan":
-    json_path = 'Output/graph_pagerank.json'
-    if os.path.exists(json_path):
-        with open(json_path, 'r', encoding='utf-8') as f:
-            saved = json.load(f)
-        G_saved = nx.DiGraph()
-        titles_saved = {}
-        for n in saved.get('nodes', []):
-            G_saved.add_node(n['id'])
-            titles_saved[n['id']] = n.get('title', n['id'])
-        for e in saved.get('edges', []):
-            G_saved.add_edge(e['source'], e['target'])
-        st.session_state.graph_data = {
-            'G': G_saved,
-            'titles': titles_saved,
-            'seed': saved.get('metadata', {}).get('seed_url', '-')
-        }
-        st.success(f"Berhasil memuat {G_saved.number_of_nodes()} simpul dari {json_path}")
+if crawl_btn:
+    raw_seed = seed_url_input.strip()
+    if not raw_seed:
+        st.warning("⚠️ Silakan masukkan Seed URL target terlebih dahulu sebelum memulai crawling!")
     else:
-        st.warning(f"File {json_path} belum ditemukan. Silakan lakukan crawl terlebih dahulu.")
-
-elif source_mode == "🕷️ Crawl Langsung (Live)" and crawl_btn:
-    crawler = WebCrawler(
-        seed_url=seed_url_input,
-        max_pages=max_pages_input,
-        delay=delay_input,
-        allowed_domains=[d.strip() for d in domain_filter.split(',') if d.strip()]
-    )
-    
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    def on_progress(current, total, url, title):
-        progress_bar.progress(current / total)
-        status_text.caption(f"[{current}/{total}] Mengunjungi: {title[:40]} ({url[:45]}...)")
+        if not raw_seed.startswith(('http://', 'https://')):
+            raw_seed = 'https://' + raw_seed
         
-    visited, edges, titles = crawler.crawl(progress_callback=on_progress)
-    progress_bar.empty()
-    status_text.empty()
-    
-    G_crawled = nx.DiGraph()
-    G_crawled.add_nodes_from(visited)
-    filtered = [(u, v) for u, v in edges if u in visited and v in visited]
-    G_crawled.add_edges_from(filtered)
-    G_crawled.remove_edges_from(nx.selfloop_edges(G_crawled))
-    
-    st.session_state.graph_data = {
-        'G': G_crawled,
-        'titles': titles,
-        'seed': seed_url_input
-    }
-    st.success(f"Crawling selesai! {G_crawled.number_of_nodes()} halaman berhasil dikelompokkan ke dalam graf.")
+        parsed_seed = urlparse(raw_seed)
+        seed_domain = parsed_seed.netloc.replace('www.', '')
+        
+        raw_filter = domain_filter_input.strip()
+        if raw_filter:
+            allowed_domains = [d.strip() for d in raw_filter.split(',') if d.strip()]
+        else:
+            allowed_domains = [seed_domain]
+            
+        crawler = WebCrawler(
+            seed_url=raw_seed,
+            max_pages=max_pages_input,
+            delay=delay_input,
+            allowed_domains=allowed_domains
+        )
+        
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        def on_progress(current, total, url, title):
+            pct = min(1.0, current / total)
+            progress_bar.progress(pct)
+            status_text.caption(f"[{current}/{total}] Mengunjungi: {title[:40]} ({url[:45]}...)")
+            
+        with st.spinner("🕷️ Sedang melakukan crawling hyperlink & ekstraksi halaman..."):
+            visited, edges, titles = crawler.crawl(progress_callback=on_progress)
+            
+        progress_bar.empty()
+        status_text.empty()
+        
+        if len(visited) == 0:
+            st.error(f"❌ Gagal mengambil halaman dari {raw_seed}. Pastikan URL aktif, dapat diakses dari internet, dan domain sesuai.")
+        else:
+            G_crawled = nx.DiGraph()
+            G_crawled.add_nodes_from(visited)
+            filtered = [(u, v) for u, v in edges if u in visited and v in visited]
+            G_crawled.add_edges_from(filtered)
+            G_crawled.remove_edges_from(nx.selfloop_edges(G_crawled))
+            
+            st.session_state.graph_data = {
+                'G': G_crawled,
+                'titles': titles,
+                'seed': raw_seed
+            }
+            st.success(f"✅ Crawling berhasil! {G_crawled.number_of_nodes()} simpul dan {G_crawled.number_of_edges()} busur berhasil dihubungkan.")
+
+
+# ==============================================================================
+# TAMPILAN AWAL JIKA BELUM ADA DATA (EMPTY STATE)
+# ==============================================================================
+if st.session_state.graph_data is None:
+    st.markdown("""
+    <div style='background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 14px; padding: 45px 25px; text-align: center; margin-top: 25px;'>
+        <div style='font-size: 3.2rem; margin-bottom: 12px;'>🕸️</div>
+        <h3 style='color: #1e293b; margin-bottom: 8px;'>Belum Ada Jaringan Web yang Dianalisis</h3>
+        <p style='color: #64748b; max-width: 620px; margin: 0 auto 18px auto; font-size: 0.96rem; line-height: 1.6;'>
+            Silakan masukkan <b>Seed URL Target</b> pada form di atas (contoh: website universitas, portal berita, atau dokumentasi resmi), 
+            tentukan jumlah halaman maksimal, lalu klik tombol <b>🚀 Mulai Crawling & Bangun Graf</b>.
+        </p>
+        <span style='background: #e2e8f0; color: #334155; padding: 6px 16px; border-radius: 9999px; font-size: 0.85rem; font-weight: 600;'>
+            💡 Sistem akan melakukan web crawling BFS, memetakan Citation Graph ala Connected Papers, serta menghitung PageRank otomatis.
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
 
 
 # ==============================================================================
 # ANALISIS METRIK & PROFIL SMALL-WORLD
 # ==============================================================================
-if st.session_state.graph_data is None:
-    st.info("Silakan pilih sumber data di atas untuk memulai eksplorasi.")
-    st.stop()
-
 G = st.session_state.graph_data['G']
 titles = st.session_state.graph_data['titles']
 seed_url = st.session_state.graph_data['seed']
@@ -642,15 +525,18 @@ clustering_ratio = (clustering_coeff / c_random) if c_random > 0 else 1.0
 if nx.is_connected(G_undir):
     avg_path_len = nx.average_shortest_path_length(G_undir)
 else:
-    largest_cc = max(nx.connected_components(G_undir), key=len)
-    avg_path_len = nx.average_shortest_path_length(G_undir.subgraph(largest_cc))
+    if G_undir.number_of_nodes() > 0:
+        largest_cc = max(nx.connected_components(G_undir), key=len)
+        avg_path_len = nx.average_shortest_path_length(G_undir.subgraph(largest_cc)) if len(largest_cc) > 1 else 0
+    else:
+        avg_path_len = 0
 
 in_degs = dict(G.in_degree())
 out_degs = dict(G.out_degree())
 density_val = nx.density(G)
-best_node = ranking[0][0]
+best_node = ranking[0][0] if ranking else seed_url
 best_title = get_page_name(best_node, titles, max_len=26)
-best_pr = ranking[0][1]
+best_pr = ranking[0][1] if ranking else 0.0
 
 
 # ==============================================================================
@@ -711,7 +597,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # TAB 1: CITATION GRAPH BERGAYA CONNECTED PAPERS
 # ==============================================================================
 with tab1:
-    # Toolbar Kontrol di Atas Graf (Mirip Tombol Connected Papers di Gambar Pengguna)
+    # Toolbar Kontrol di Atas Graf (Mirip Tombol Connected Papers)
     col_t1, col_t2, col_t3, col_t4 = st.columns([3, 2, 2, 2])
     with col_t1:
         color_choice = st.selectbox(
@@ -743,7 +629,7 @@ with tab1:
     st.markdown(f"""
     **Keterangan Visual (Gaya Connected Papers):**
     - ⚫ **Simpul Hitam/Charcoal ({best_title}):** Simpul pusat / jangkar utama jaringan web (*Seed Paper/Top Node*).
-    - 🔵 🟢 🟠 🔴 🟣 **Simpul Warna-Warni:** Menandakan **Klaster Komunitas Tematik** (misal: Fakultas Teknik, LPPM, SIAKAD, FEB) yang terkelompok secara otomatis menggunakan deteksi modularitas Louvain.
+    - 🔵 🟢 🟠 🔴 🟣 **Simpul Warna-Warni:** Menandakan **Klaster Komunitas Tematik** yang terkelompok secara otomatis menggunakan deteksi modularitas Louvain.
     - 🔘 **Ukuran Lingkaran:** Merefleksikan **bobot PageRank / Tingkat Pengaruh**. Semakin penting sebuah halaman, semakin besar lingkarannya.
     - 🔗 **Garis Abu-abu Halus:** Koneksi hyperlink antar halaman. Tautan padat di dalam satu kelompok membentuk **komunitas**, sedangkan tautan antar-kelompok membentuk **jembatan pintas (*small-world shortcut*)**.
     """)
@@ -763,32 +649,34 @@ with tab2:
             'Nama Halaman': get_page_name(url, titles, max_len=36),
             'URL Asli': url,
             'Skor PageRank': round(score, 6),
-            'Tautan Masuk (In-Degree)': in_degs[url],
-            'Tautan Keluar (Out-Degree)': out_degs[url]
+            'Tautan Masuk (In-Degree)': in_degs.get(url, 0),
+            'Tautan Keluar (Out-Degree)': out_degs.get(url, 0)
         })
     df_top10 = pd.DataFrame(top10_rows)
     st.dataframe(df_top10, use_container_width=True, hide_index=True)
     
     # Horizontal Bar Chart
-    st.markdown("#### Perbandingan Skor PageRank Top-10")
-    fig, ax = plt.subplots(figsize=(10, 4.5))
-    plot_labels = [get_page_name(u, titles, max_len=24) for u, _ in ranking[:10]][::-1]
-    plot_scores = [s for _, s in ranking[:10]][::-1]
-    colors = plt.cm.RdYlGn_r(np.linspace(0.15, 0.85, 10))
-    
-    bars = ax.barh(range(10), plot_scores, color=colors, edgecolor='#1e293b', height=0.65)
-    ax.set_yticks(range(10))
-    ax.set_yticklabels(plot_labels, fontsize=9.5, fontweight='bold', color='#1e293b')
-    ax.set_xlabel('Skor PageRank', fontsize=10, fontweight='bold')
-    ax.grid(axis='x', linestyle='--', alpha=0.5)
-    
-    for bar in bars:
-        w = bar.get_width()
-        ax.text(w + 0.002, bar.get_y() + bar.get_height() / 2, f"{w:.4f}",
-                va='center', fontsize=9, fontweight='bold', color='#0f172a')
-                
-    plt.tight_layout()
-    st.pyplot(fig)
+    if len(ranking) > 0:
+        st.markdown("#### Perbandingan Skor PageRank Top-10")
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        plot_items = ranking[:min(10, len(ranking))][::-1]
+        plot_labels = [get_page_name(u, titles, max_len=24) for u, _ in plot_items]
+        plot_scores = [s for _, s in plot_items]
+        colors = plt.cm.RdYlGn_r(np.linspace(0.15, 0.85, len(plot_items)))
+        
+        bars = ax.barh(range(len(plot_items)), plot_scores, color=colors, edgecolor='#1e293b', height=0.65)
+        ax.set_yticks(range(len(plot_items)))
+        ax.set_yticklabels(plot_labels, fontsize=9.5, fontweight='bold', color='#1e293b')
+        ax.set_xlabel('Skor PageRank', fontsize=10, fontweight='bold')
+        ax.grid(axis='x', linestyle='--', alpha=0.5)
+        
+        for bar in bars:
+            w = bar.get_width()
+            ax.text(w + 0.002, bar.get_y() + bar.get_height() / 2, f"{w:.4f}",
+                    va='center', fontsize=9, fontweight='bold', color='#0f172a')
+                    
+        plt.tight_layout()
+        st.pyplot(fig)
 
 
 # ==============================================================================
@@ -811,7 +699,7 @@ with tab3:
         st.write(f"- **Rata-rata Jarak Terpendek ($L$):** `{avg_path_len:.2f} lompatan`")
         
         if clustering_ratio > 1.5:
-            st.success("✅ **Terbukti:** Graf memenuhi sifat **Small-World Network**, di mana website membentuk klaster fakultas/unit yang padat dan saling terhubung melalui halaman beranda/hub.")
+            st.success("✅ **Terbukti:** Graf memenuhi sifat **Small-World Network**, di mana website membentuk klaster halaman/subtopik yang padat dan saling terhubung melalui halaman beranda/hub.")
         else:
             st.info("ℹ️ Struktur graf tersebar secara merata.")
             
@@ -848,8 +736,8 @@ with tab4:
             'community_cluster': node_comms.get(u, 0) + 1,
             'pagerank': round(score, 6),
             'rank': r,
-            'in_degree': in_degs[u],
-            'out_degree': out_degs[u]
+            'in_degree': in_degs.get(u, 0),
+            'out_degree': out_degs.get(u, 0)
         })
     edges_export = [{'source': s, 'target': t} for s, t in G.edges()]
     full_export = {
