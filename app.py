@@ -1008,7 +1008,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==============================================================================
 # TABS NAVIGASI (FOLDER KARTON)
 # ==============================================================================
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2 = st.tabs([
     "01 // CITATION GRAPH",
     "02 // TOP-10 PAGERANK"
 ])
