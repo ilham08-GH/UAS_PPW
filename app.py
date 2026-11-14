@@ -709,7 +709,7 @@ if st.session_state.graph_data is None:
             [ DATA KOSONG ]
         </div>
         <p style='color: #3d332a; max-width: 640px; margin: 0 auto 18px auto; font-size: 0.95rem; line-height: 1.6;'>
-            Masukkan <b>Seed URL Target</b> pada kolom di atas, lalu tekan tombol <b>MULAI CRAWLING & BANGUN GRAF</b>.
+            Masukkan <b>Seed URL</b> pada kolom di atas, lalu tekan tombol <b>MULAI CRAWLING & BANGUN GRAF</b>.
         </p>
     </div>
     """, unsafe_allow_html=True)
