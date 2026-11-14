@@ -616,7 +616,7 @@ with st.container():
         seed_url_input = st.text_input(
             "SEED URL TARGET (HALAMAN AWAL):",
             value="",
-            placeholder="https://uinsa.ac.id atau https://www.trunojoyo.ac.id"
+            placeholder="Masukkan URL"
         )
     with col_c2:
         domain_filter_input = st.text_input(
@@ -706,15 +706,11 @@ if st.session_state.graph_data is None:
     st.markdown("""
     <div class='empty-box'>
         <div style='font-family: Space Mono, monospace; font-size: 1.5rem; font-weight: 700; color: #1f1a16; margin-bottom: 10px;'>
-            [ KARDUS DATA KOSONG // BELUM ADA GRAF ]
+            [ DATA KOSONG ]
         </div>
         <p style='color: #3d332a; max-width: 640px; margin: 0 auto 18px auto; font-size: 0.95rem; line-height: 1.6;'>
-            Masukkan <b>Seed URL Target</b> pada kolom di atas (contoh: <code>https://uinsa.ac.id</code>, <code>https://www.its.ac.id</code>, atau <code>https://www.trunojoyo.ac.id</code>), 
-            atur jumlah halaman maksimal, lalu tekan tombol <b>MULAI CRAWLING & BANGUN GRAF</b>.
+            Masukkan <b>Seed URL Target</b> pada kolom di atas, lalu tekan tombol <b>MULAI CRAWLING & BANGUN GRAF</b>.
         </p>
-        <span style='background: #f4ece1; border: 2px solid #1f1a16; color: #1f1a16; padding: 6px 14px; font-family: Space Mono, monospace; font-size: 0.78rem; font-weight: 700;'>
-            SPEC: HTTP SESSION POOLING // FILTER ANTI-404 // LOUVAIN CLUSTERING
-        </span>
     </div>
     """, unsafe_allow_html=True)
     st.stop()
