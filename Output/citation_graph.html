@@ -1,0 +1,357 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #1a1a2e;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(217, 82, 76)", "font": {"color": "white"}, "id": "https://www.trunojoyo.ac.id", "label": "UTM Official \u2013 Unggul,", "shape": "dot", "size": 62.874638426128094, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003eUTM Official \u2013 Unggul, Tangguh, Mandiri\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://www.trunojoyo.ac.id\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.150268\u003c/span\u003e (Rank #2)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 4\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 9\u003c/div\u003e"}, {"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(94, 154, 196)", "font": {"color": "white"}, "id": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "label": "Dokumen Sumber Daya Ma", "shape": "dot", "size": 29.873345859627456, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003eDokumen Sumber Daya Manusia \u2013 UTM Official\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.083443\u003c/span\u003e (Rank #7)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 4\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 8\u003c/div\u003e"}, {"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(50, 180, 240)", "font": {"color": "white"}, "id": "https://www2.trunojoyo.ac.id/category/headlines", "label": "Headlines \u2013 UTM Offici", "shape": "dot", "size": 18.0, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003eHeadlines \u2013 UTM Official\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://www2.trunojoyo.ac.id/category/headlines\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.059400\u003c/span\u003e (Rank #10)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 1\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 8\u003c/div\u003e"}, {"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(94, 154, 196)", "font": {"color": "white"}, "id": "https://www2.trunojoyo.ac.id/data-penelitian-2", "label": "Data Penelitian \u2013 UTM ", "shape": "dot", "size": 29.873345859627456, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003eData Penelitian \u2013 UTM Official\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://www2.trunojoyo.ac.id/data-penelitian-2\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.083443\u003c/span\u003e (Rank #8)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 4\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 8\u003c/div\u003e"}, {"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(110, 144, 180)", "font": {"color": "white"}, "id": "https://fk.trunojoyo.ac.id", "label": "Fakultas Kedokteran Un", "shape": "dot", "size": 34.25167384904044, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003eFakultas Kedokteran Universitas Trunodjoyo Madura\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://fk.trunojoyo.ac.id\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.092308\u003c/span\u003e (Rank #3)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 5\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 1\u003c/div\u003e"}, {"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(110, 144, 180)", "font": {"color": "white"}, "id": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm", "label": "Seleksi Mandiri Masuk ", "shape": "dot", "size": 34.25167384904044, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003eSeleksi Mandiri Masuk UTM (SMMUTM) \u2013 PMB UTM\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.092308\u003c/span\u003e (Rank #4)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 5\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 0\u003c/div\u003e"}, {"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(255, 60, 40)", "font": {"color": "white"}, "id": "https://mbkm.trunojoyo.ac.id", "label": "Sistem Informasi MBKM", "shape": "dot", "size": 73.0, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003eSistem Informasi MBKM\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://mbkm.trunojoyo.ac.id\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.170771\u003c/span\u003e (Rank #1)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 6\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 0\u003c/div\u003e"}, {"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(94, 154, 196)", "font": {"color": "white"}, "id": "https://www2.trunojoyo.ac.id/sejarahutm", "label": "Sejarah \u2013 UTM Official", "shape": "dot", "size": 29.873345859627456, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003eSejarah \u2013 UTM Official\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://www2.trunojoyo.ac.id/sejarahutm\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.083443\u003c/span\u003e (Rank #9)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 4\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 8\u003c/div\u003e"}, {"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(110, 144, 180)", "font": {"color": "white"}, "id": "https://hki.trunojoyo.ac.id", "label": "Bot Detection", "shape": "dot", "size": 34.25167384904044, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003eBot Detection\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://hki.trunojoyo.ac.id\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.092308\u003c/span\u003e (Rank #5)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 5\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 0\u003c/div\u003e"}, {"borderWidth": 2, "borderWidthSelected": 4, "color": "rgb(110, 144, 180)", "font": {"color": "white"}, "id": "https://pasca.trunojoyo.ac.id", "label": "PASCASARJANA Official", "shape": "dot", "size": 34.25167384904044, "title": "\u003cdiv style=\u0027font-family: Arial, sans-serif; padding: 4px;\u0027\u003e\u003cb style=\u0027font-size: 13px; color: #f6e05e;\u0027\u003ePASCASARJANA Official\u003c/b\u003e\u003cbr\u003e\u003cspan style=\u0027font-size: 11px; color: #cbd5e0;\u0027\u003ehttps://pasca.trunojoyo.ac.id\u003c/span\u003e\u003cbr\u003e\u003chr style=\u0027border: 0; border-top: 1px solid #4a5568; margin: 6px 0;\u0027\u003e\u003cb\u003e\ud83c\udfc6 PageRank:\u003c/b\u003e \u003cspan style=\u0027color: #68d391;\u0027\u003e0.092308\u003c/span\u003e (Rank #6)\u003cbr\u003e\u003cb\u003e\ud83d\udce5 In-Degree (Tautan Masuk):\u003c/b\u003e 5\u003cbr\u003e\u003cb\u003e\ud83d\udce4 Out-Degree (Tautan Keluar):\u003c/b\u003e 1\u003c/div\u003e"}]);
+                  edges = new vis.DataSet([{"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/category/headlines", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://fk.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/data-penelitian-2", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://mbkm.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/sejarahutm", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://hki.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pasca.trunojoyo.ac.id", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://fk.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/data-penelitian-2", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://mbkm.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/sejarahutm", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://hki.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pasca.trunojoyo.ac.id", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/category/headlines", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://mbkm.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/category/headlines", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pasca.trunojoyo.ac.id", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/category/headlines", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://fk.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/category/headlines", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/category/headlines", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/sejarahutm", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/category/headlines", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/data-penelitian-2", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/category/headlines", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://hki.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/category/headlines", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/data-penelitian-2", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/data-penelitian-2", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://fk.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/data-penelitian-2", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/data-penelitian-2", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://mbkm.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/data-penelitian-2", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/sejarahutm", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/data-penelitian-2", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://hki.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/data-penelitian-2", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pasca.trunojoyo.ac.id", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/data-penelitian-2", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://fk.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://mbkm.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/sejarahutm", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/sejarahutm", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://fk.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/sejarahutm", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www2.trunojoyo.ac.id/data-penelitian-2", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/sejarahutm", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/sejarahutm", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://mbkm.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/sejarahutm", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://hki.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(160, 174, 192, 0.65)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/sejarahutm", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://pasca.trunojoyo.ac.id", "width": 1.4}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://www2.trunojoyo.ac.id/sejarahutm", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www.trunojoyo.ac.id", "width": 2.2}, {"arrows": {"to": {"enabled": true, "scaleFactor": 0.8}}, "color": {"color": "rgba(239, 68, 68, 0.85)", "highlight": "#ff4757", "hover": "#38bdf8"}, "from": "https://pasca.trunojoyo.ac.id", "smooth": {"roundness": 0.12, "type": "curvedCW"}, "to": "https://www.trunojoyo.ac.id", "width": 2.2}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "barnesHut": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.3,
+            "damping": 0.09,
+            "gravitationalConstant": -4000,
+            "springConstant": 0.03,
+            "springLength": 180
+        },
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

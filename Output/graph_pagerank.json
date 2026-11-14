@@ -1,0 +1,286 @@
+{
+  "metadata": {
+    "seed_url": "https://www.trunojoyo.ac.id",
+    "total_nodes": 10,
+    "total_edges": 43,
+    "density": 0.477778,
+    "damping_factor": 0.85,
+    "converged_at_iteration": 19
+  },
+  "nodes": [
+    {
+      "id": "https://mbkm.trunojoyo.ac.id",
+      "title": "Sistem Informasi MBKM",
+      "path": "/",
+      "pagerank": 0.17077073,
+      "rank": 1,
+      "in_degree": 6,
+      "out_degree": 0,
+      "betweenness": 0.0
+    },
+    {
+      "id": "https://www.trunojoyo.ac.id",
+      "title": "UTM Official – Unggul, Tangguh, Mandiri",
+      "path": "/",
+      "pagerank": 0.15026767,
+      "rank": 2,
+      "in_degree": 4,
+      "out_degree": 9,
+      "betweenness": 0.15277778
+    },
+    {
+      "id": "https://fk.trunojoyo.ac.id",
+      "title": "Fakultas Kedokteran Universitas Trunodjoyo Madura",
+      "path": "/",
+      "pagerank": 0.09230841,
+      "rank": 3,
+      "in_degree": 5,
+      "out_degree": 1,
+      "betweenness": 0.0
+    },
+    {
+      "id": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm",
+      "title": "Seleksi Mandiri Masuk UTM (SMMUTM) – PMB UTM",
+      "path": "/seleksi-mandiri-masuk-utm-smmutm",
+      "pagerank": 0.09230841,
+      "rank": 4,
+      "in_degree": 5,
+      "out_degree": 0,
+      "betweenness": 0.0
+    },
+    {
+      "id": "https://hki.trunojoyo.ac.id",
+      "title": "Bot Detection",
+      "path": "/",
+      "pagerank": 0.09230841,
+      "rank": 5,
+      "in_degree": 5,
+      "out_degree": 0,
+      "betweenness": 0.0
+    },
+    {
+      "id": "https://pasca.trunojoyo.ac.id",
+      "title": "PASCASARJANA Official",
+      "path": "/",
+      "pagerank": 0.09230841,
+      "rank": 6,
+      "in_degree": 5,
+      "out_degree": 1,
+      "betweenness": 0.00347222
+    },
+    {
+      "id": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia",
+      "title": "Dokumen Sumber Daya Manusia – UTM Official",
+      "path": "/dokumen-sumber-daya-manusia",
+      "pagerank": 0.08344264,
+      "rank": 7,
+      "in_degree": 4,
+      "out_degree": 8,
+      "betweenness": 0.00347222
+    },
+    {
+      "id": "https://www2.trunojoyo.ac.id/data-penelitian-2",
+      "title": "Data Penelitian – UTM Official",
+      "path": "/data-penelitian-2",
+      "pagerank": 0.08344264,
+      "rank": 8,
+      "in_degree": 4,
+      "out_degree": 8,
+      "betweenness": 0.00347222
+    },
+    {
+      "id": "https://www2.trunojoyo.ac.id/sejarahutm",
+      "title": "Sejarah – UTM Official",
+      "path": "/sejarahutm",
+      "pagerank": 0.08344264,
+      "rank": 9,
+      "in_degree": 4,
+      "out_degree": 8,
+      "betweenness": 0.00347222
+    },
+    {
+      "id": "https://www2.trunojoyo.ac.id/category/headlines",
+      "title": "Headlines – UTM Official",
+      "path": "/category/headlines",
+      "pagerank": 0.05940004,
+      "rank": 10,
+      "in_degree": 1,
+      "out_degree": 8,
+      "betweenness": 0.0
+    }
+  ],
+  "edges": [
+    {
+      "source": "https://www.trunojoyo.ac.id",
+      "target": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia"
+    },
+    {
+      "source": "https://www.trunojoyo.ac.id",
+      "target": "https://www2.trunojoyo.ac.id/category/headlines"
+    },
+    {
+      "source": "https://www.trunojoyo.ac.id",
+      "target": "https://fk.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www.trunojoyo.ac.id",
+      "target": "https://www2.trunojoyo.ac.id/data-penelitian-2"
+    },
+    {
+      "source": "https://www.trunojoyo.ac.id",
+      "target": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm"
+    },
+    {
+      "source": "https://www.trunojoyo.ac.id",
+      "target": "https://mbkm.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www.trunojoyo.ac.id",
+      "target": "https://www2.trunojoyo.ac.id/sejarahutm"
+    },
+    {
+      "source": "https://www.trunojoyo.ac.id",
+      "target": "https://hki.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www.trunojoyo.ac.id",
+      "target": "https://pasca.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia",
+      "target": "https://fk.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia",
+      "target": "https://www2.trunojoyo.ac.id/data-penelitian-2"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia",
+      "target": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia",
+      "target": "https://mbkm.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia",
+      "target": "https://www2.trunojoyo.ac.id/sejarahutm"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia",
+      "target": "https://hki.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia",
+      "target": "https://pasca.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia",
+      "target": "https://www.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/category/headlines",
+      "target": "https://mbkm.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/category/headlines",
+      "target": "https://pasca.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/category/headlines",
+      "target": "https://fk.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/category/headlines",
+      "target": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/category/headlines",
+      "target": "https://www2.trunojoyo.ac.id/sejarahutm"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/category/headlines",
+      "target": "https://www2.trunojoyo.ac.id/data-penelitian-2"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/category/headlines",
+      "target": "https://hki.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/category/headlines",
+      "target": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/data-penelitian-2",
+      "target": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/data-penelitian-2",
+      "target": "https://fk.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/data-penelitian-2",
+      "target": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/data-penelitian-2",
+      "target": "https://mbkm.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/data-penelitian-2",
+      "target": "https://www2.trunojoyo.ac.id/sejarahutm"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/data-penelitian-2",
+      "target": "https://hki.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/data-penelitian-2",
+      "target": "https://pasca.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/data-penelitian-2",
+      "target": "https://www.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://fk.trunojoyo.ac.id",
+      "target": "https://mbkm.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/sejarahutm",
+      "target": "https://www2.trunojoyo.ac.id/dokumen-sumber-daya-manusia"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/sejarahutm",
+      "target": "https://fk.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/sejarahutm",
+      "target": "https://www2.trunojoyo.ac.id/data-penelitian-2"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/sejarahutm",
+      "target": "https://pmb.trunojoyo.ac.id/seleksi-mandiri-masuk-utm-smmutm"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/sejarahutm",
+      "target": "https://mbkm.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/sejarahutm",
+      "target": "https://hki.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/sejarahutm",
+      "target": "https://pasca.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://www2.trunojoyo.ac.id/sejarahutm",
+      "target": "https://www.trunojoyo.ac.id"
+    },
+    {
+      "source": "https://pasca.trunojoyo.ac.id",
+      "target": "https://www.trunojoyo.ac.id"
+    }
+  ]
+}
