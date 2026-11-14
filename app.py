@@ -72,7 +72,7 @@ st.markdown("""
 
     /* Efek Lakban Coklat di Atas Kardus */
     .cardboard-header::before {
-        content: "FRAGILE // NETWORK DATA";
+        content: "UAS PPW";
         position: absolute;
         top: -14px;
         right: 28px;
@@ -603,11 +603,7 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
 # HEADER UTAMA (KOTAK KARDUS DENGAN LAKBAN)
 # ==============================================================================
 st.markdown("""
-<div class='cardboard-header'>
-    <div class='main-title'>[ CITATION GRAPH & SMALL-WORLD EXPLORER ]</div>
-    <div class='sub-title'>Pemetaan Jaringan Hyperlink Web Bergaya Connected Papers — Analisis Topologi Small-World & PageRank</div>
-    <div class='author-stamp'>OPR: MUHAMMAD ILHAM ADILA ALMAFAZ // NIM: 230411100113 // TEKNIK INFORMATIKA UTM</div>
-</div>
+st.markdown("<div class='cardboard-header' style='text-align: center;'><div class='main-title'>[ NodeCraft ]</div></div>", unsafe_allow_html=True)
 """, unsafe_allow_html=True)
 
 
