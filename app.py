@@ -558,7 +558,7 @@ if crawl_btn:
             }
             msg = f"✅ Crawling berhasil! {G_crawled.number_of_nodes()} simpul dan {G_crawled.number_of_edges()} busur berhasil dihubungkan."
             if crawler.failed_urls:
-                msg += f" (Sebanyak {len(crawler.failed_urls)} tautan rusak/404/timeout berhasil disaring bersih)."
+                msg += f.""
             st.success(msg)
 
 
