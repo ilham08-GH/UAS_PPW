@@ -9,6 +9,7 @@ from collections import deque
 import time
 import json
 import os
+import html as html_lib
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -220,7 +221,6 @@ st.markdown("""
     /* =========================================================================
        PENGATURAN TAB KARTON TEGAS & BACKGROUND TAB (CARDBOARD NEOBRUTALISM)
        ========================================================================= */
-    /* Container pembungkus deretan tab */
     div[data-testid="stTabs"] {
         background-color: transparent !important;
         margin-top: 10px !important;
@@ -305,6 +305,67 @@ st.markdown("""
         margin-top: 0px !important;
     }
 
+    /* =========================================================================
+       TABEL GAYA CARDBOARD / KRAFT BOX NEOBRUTALISM
+       ========================================================================= */
+    .cardboard-table-wrap {
+        border: 3px solid #1f1a16;
+        box-shadow: 6px 6px 0px #1f1a16;
+        background-color: #f4ece1;
+        overflow-x: auto;
+        margin-top: 14px;
+        margin-bottom: 24px;
+    }
+
+    table.cardboard-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'Work Sans', sans-serif;
+        font-size: 0.88rem;
+        background-color: #f4ece1;
+        color: #1f1a16;
+    }
+
+    table.cardboard-table th {
+        background-color: #d6bc97;
+        color: #1f1a16;
+        font-family: 'Space Mono', monospace;
+        font-weight: 700;
+        font-size: 0.82rem;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        border-bottom: 3px solid #1f1a16;
+        border-right: 1.5px solid #1f1a16;
+        padding: 12px 14px;
+        white-space: nowrap;
+    }
+    table.cardboard-table th:last-child {
+        border-right: none;
+    }
+
+    table.cardboard-table td {
+        padding: 10px 14px;
+        border-bottom: 1.5px solid #1f1a16;
+        border-right: 1.5px solid #1f1a16;
+        vertical-align: middle;
+    }
+    table.cardboard-table td:last-child {
+        border-right: none;
+    }
+
+    table.cardboard-table tbody tr:nth-child(even) {
+        background-color: #ede2d3;
+    }
+    table.cardboard-table tbody tr:nth-child(odd) {
+        background-color: #f4ece1;
+    }
+    table.cardboard-table tbody tr:hover {
+        background-color: #e3d0b8 !important;
+    }
+    table.cardboard-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
     label, .stMarkdown p, .stMarkdown li {
         color: #1f1a16 !important;
     }
@@ -316,6 +377,77 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+
+# ==============================================================================
+# FUNGSI RENDER TABEL CARDBOARD NEOBRUTALISM
+# ==============================================================================
+def render_cardboard_table(df, align_right_cols=None, badge_col=None):
+    """
+    Merender DataFrame pandas menjadi tabel HTML berkarakter Cardboard Neobrutalism:
+    header coklat karton, border hitam 3px, badge stempel nomor urut, dan belang kraft halus.
+    """
+    align_right_cols = align_right_cols or []
+    headers = df.columns.tolist()
+
+    html = ["<div class='cardboard-table-wrap'>"]
+    html.append("<table class='cardboard-table'>")
+
+    # Header Tabel
+    html.append("<thead><tr>")
+    for col in headers:
+        align = "right" if col in align_right_cols else "left"
+        html.append(f"<th style='text-align: {align};'>{html_lib.escape(str(col))}</th>")
+    html.append("</tr></thead>")
+
+    # Baris Data (Body)
+    html.append("<tbody>")
+    for idx, row in df.iterrows():
+        html.append("<tr>")
+        for col in headers:
+            val = row[col]
+            align = "right" if col in align_right_cols else "left"
+
+            if col == badge_col:
+                val_str = html_lib.escape(str(val))
+                if idx == 0:
+                    badge_style = "background: #1f1a16; color: #f4ece1; border: 2px solid #b85d38; box-shadow: 2px 2px 0px #b85d38;"
+                elif idx in (1, 2):
+                    badge_style = "background: #b85d38; color: #f7f1e5; border: 1.5px solid #1f1a16; box-shadow: 2px 2px 0px #1f1a16;"
+                else:
+                    badge_style = "background: #d6bc97; color: #1f1a16; border: 1.5px solid #1f1a16; box-shadow: 1px 1px 0px #1f1a16;"
+                cell_html = (
+                    f"<span style='{badge_style} font-family: \"Space Mono\", monospace; "
+                    f"font-weight: 700; font-size: 0.78rem; padding: 2px 7px; display: inline-block;'>"
+                    f"{val_str}</span>"
+                )
+            elif col == 'URL ASLI':
+                url_text = str(val)
+                short_url = url_text[:46] + '...' if len(url_text) > 46 else url_text
+                safe_url = html_lib.escape(url_text)
+                safe_short = html_lib.escape(short_url)
+                cell_html = (
+                    f"<a href='{safe_url}' target='_blank' "
+                    f"style='color: #2f5266; text-decoration: underline; font-family: \"Space Mono\", monospace; font-size: 0.78rem;'>"
+                    f"{safe_short}</a>"
+                )
+            elif col in ('SKOR PAGERANK', 'PAGERANK'):
+                cell_html = f"<span style='font-family: \"Space Mono\", monospace; font-weight: 700; color: #b85d38;'>{val}</span>"
+            elif col in ('IN-DEGREE', 'OUT-DEGREE', 'IN-DEGREE CENT.', 'BETWEENNESS CENT.'):
+                cell_html = f"<span style='font-family: \"Space Mono\", monospace; font-weight: 700; color: #1f1a16;'>{val}</span>"
+            elif col in ('NAMA HALAMAN', 'HALAMAN'):
+                safe_name = html_lib.escape(str(val))
+                cell_html = f"<span style='font-weight: 700; color: #1f1a16;'>{safe_name}</span>"
+            else:
+                cell_html = html_lib.escape(str(val))
+
+            html.append(f"<td style='text-align: {align};'>{cell_html}</td>")
+        html.append("</tr>")
+    html.append("</tbody>")
+    html.append("</table>")
+    html.append("</div>")
+
+    return "".join(html)
 
 
 # ==============================================================================
@@ -876,9 +1008,11 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==============================================================================
 # TABS NAVIGASI (FOLDER KARTON)
 # ==============================================================================
-tab1, tab2 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "01 // CITATION GRAPH",
-    "02 // TOP-10 PAGERANK"
+    "02 // TOP-10 PAGERANK",
+    "03 // SMALL-WORLD ANALYSIS",
+    "04 // EKSPOR DATA LAB"
 ])
 
 
@@ -939,7 +1073,16 @@ with tab2:
             'OUT-DEGREE': out_degs.get(url, 0)
         })
     df_top10 = pd.DataFrame(top10_rows)
-    st.dataframe(df_top10, use_container_width=True, hide_index=True)
+    
+    # Render tabel dengan tema Cardboard / Kraft Neobrutalism
+    st.markdown(
+        render_cardboard_table(
+            df_top10,
+            align_right_cols=['SKOR PAGERANK', 'IN-DEGREE', 'OUT-DEGREE'],
+            badge_col='RANK'
+        ),
+        unsafe_allow_html=True
+    )
     
     if len(ranking) > 0:
         st.markdown("#### GRAFIK DISTRIBUSI TOP-10 PAGERANK")
@@ -977,6 +1120,121 @@ with tab2:
         ax.set_xlim(0, max_val * 1.15)
         plt.tight_layout()
         st.pyplot(fig)
+
+
+# ==============================================================================
+# TAB 3: ANALISIS SIFAT SMALL-WORLD
+# ==============================================================================
+with tab3:
+    st.markdown("#### PENGUJIAN TOPOLOGI SMALL-WORLD (WATTS & STROGATZ, 1998)")
+    st.markdown(r"""
+    Sebuah jaringan memenuhi kriteria **Small-World Network** apabila memenuhi dua syarat empiris:
+    1. **Klasterisasi Lokal Tinggi ($C \gg C_{random}$):** Halaman-halaman membentuk kelompok subtopik yang rapat.
+    2. **Rerata Lintasan Pendek ($L \approx L_{random}$):** Setiap halaman dapat dijangkau hanya dalam sedikit lompatan klik.
+    """)
+    
+    col_sw1, col_sw2 = st.columns(2)
+    with col_sw1:
+        st.markdown("#### PARAMETER EMPIRIS:")
+        st.write(f"- **Koefisien Klasterisasi Aktual ($C$):** `{clustering_coeff:.4f}`")
+        st.write(f"- **Koefisien Klasterisasi Graf Acak ($C_{{random}}$):** `{c_random:.4f}`")
+        st.write(f"- **Rasio Penguatan Klaster ($C / C_{{random}}$):** `{clustering_ratio:.2f}x`")
+        st.write(f"- **Rata-rata Jarak Terpendek ($L$):** `{avg_path_len:.2f} hops`")
+        
+        if clustering_ratio > 1.5:
+            st.success("STATUS: TERVERIFIKASI SMALL-WORLD NETWORK (Rasio klasterisasi jauh melampaui jaringan acak).")
+        else:
+            st.info("STATUS: DISTRIBUSI MERATA (Klasterisasi mendekati graf acak atau ukuran sampel terlalu kecil).")
+            
+    with col_sw2:
+        st.markdown("#### TABEL SENTRALITAS JARINGAN:")
+        in_deg_cent = nx.in_degree_centrality(G)
+        betw_cent = nx.betweenness_centrality(G)
+        cent_data = []
+        for r_i, (u_i, p_i) in enumerate(ranking[:6], 1):
+            cent_data.append({
+                'RANK': f"#{r_i:02d}",
+                'HALAMAN': get_page_name(u_i, titles, max_len=24),
+                'PAGERANK': round(p_i, 4),
+                'IN-DEGREE CENT.': round(in_deg_cent[u_i], 4),
+                'BETWEENNESS CENT.': round(betw_cent[u_i], 4)
+            })
+        df_cent = pd.DataFrame(cent_data)
+        
+        # Render tabel sentralitas dengan tema Cardboard / Kraft Neobrutalism
+        st.markdown(
+            render_cardboard_table(
+                df_cent,
+                align_right_cols=['PAGERANK', 'IN-DEGREE CENT.', 'BETWEENNESS CENT.'],
+                badge_col='RANK'
+            ),
+            unsafe_allow_html=True
+        )
+
+
+# ==============================================================================
+# TAB 4: EKSPOR DATA & INTEGRASI SERVER LAB
+# ==============================================================================
+with tab4:
+    st.markdown("#### EKSPOR PAKET DATA UNTUK SERVER LAB")
+    st.write("Unduh berkas keluaran di bawah ini untuk integrasi lebih lanjut pada sistem eksternal.")
+    
+    nodes_export = []
+    node_comms = detect_communities(G)
+    for r, (u, score) in enumerate(ranking, 1):
+        nodes_export.append({
+            'id': u,
+            'name': get_page_name(u, titles, max_len=40),
+            'title': titles.get(u, u),
+            'community_cluster': node_comms.get(u, 0) + 1,
+            'pagerank': round(score, 6),
+            'rank': r,
+            'in_degree': in_degs.get(u, 0),
+            'out_degree': out_degs.get(u, 0)
+        })
+    edges_export = [{'source': s, 'target': t} for s, t in G.edges()]
+    full_export = {
+        'metadata': {
+            'seed_url': seed_url,
+            'network_type': 'Small-World Citation Graph',
+            'total_nodes': N_nodes,
+            'total_edges': E_edges,
+            'clustering_coefficient': round(clustering_coeff, 4),
+            'average_shortest_path_length': round(avg_path_len, 4),
+            'density': round(density_val, 6),
+            'damping_factor': damping_factor
+        },
+        'nodes': nodes_export,
+        'edges': edges_export
+    }
+    json_str = json.dumps(full_export, indent=2, ensure_ascii=False)
+    csv_str = df_top10.to_csv(index=False)
+    
+    col_d1, col_d2, col_d3 = st.columns(3)
+    with col_d1:
+        st.download_button(
+            label="UNDUH JSON GRAF & PAGERANK",
+            data=json_str.encode('utf-8'),
+            file_name="graph_pagerank.json",
+            mime="application/json",
+            use_container_width=True
+        )
+    with col_d2:
+        st.download_button(
+            label="UNDUH CSV TOP-10 PAGERANK",
+            data=csv_str.encode('utf-8'),
+            file_name="top10_pagerank.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    with col_d3:
+        st.download_button(
+            label="UNDUH HTML CITATION GRAPH",
+            data=html_graph.encode('utf-8') if isinstance(html_graph, str) else html_graph,
+            file_name="citation_graph.html",
+            mime="text/html",
+            use_container_width=True
+        )
         
     st.markdown("#### PREVIEW STRUKTUR JSON:")
     st.code(json.dumps(full_export['nodes'][:2], indent=2), language='json')
