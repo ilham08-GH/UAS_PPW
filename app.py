@@ -1,5 +1,8 @@
 import streamlit as st
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import urllib3
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from collections import deque
@@ -13,6 +16,9 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import streamlit.components.v1 as components
 from pyvis.network import Network
+
+# Nonaktifkan peringatan SSL tidak aman untuk server kampus dengan cert chain khusus
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ==============================================================================
 # KONFIGURASI HALAMAN STREAMLIT (TANPA SIDEBAR, FULL-WIDTH)
@@ -162,13 +168,11 @@ def get_page_name(url, page_titles=None, max_len=30):
     parsed = urlparse(url)
     if page_titles and url in page_titles:
         title = str(page_titles[url]).strip()
-        # Bersihkan pemisah judul umum
         for sep in [' - ', ' | ', ' — ', ' :: ']:
             if sep in title:
                 parts = title.split(sep)
                 if len(parts[0]) > 3:
                     title = parts[0].strip()
-        # Pastikan bukan string error
         if title and title != '-' and title != url and not title.startswith('http'):
             if not any(err in title.lower() for err in ['not found', 'error 404', 'tidak ditemukan', '404 error']):
                 return title[:max_len]
@@ -195,13 +199,14 @@ def get_page_name(url, page_titles=None, max_len=30):
 
 
 # ==============================================================================
-# KELAS WEB CRAWLER (BFS) DENGAN FILTER 404 & ERROR PAGE KETAT
+# KELAS WEB CRAWLER ROBUST (SESSION, RETRY, TIMEOUT PANJANG & FILTER 404)
 # ==============================================================================
 class WebCrawler:
-    def __init__(self, seed_url, max_pages=30, delay=0.5, allowed_domains=None):
+    def __init__(self, seed_url, max_pages=30, delay=0.4, timeout=16, allowed_domains=None):
         self.seed_url = seed_url
         self.max_pages = max_pages
         self.delay = delay
+        self.timeout = timeout
         parsed = urlparse(seed_url)
         self.seed_domain = parsed.netloc.replace('www.', '')
         self.allowed_domains = allowed_domains or [self.seed_domain]
@@ -209,8 +214,18 @@ class WebCrawler:
         self.edges = []
         self.page_titles = {}
         self.failed_urls = []
+        
+        # Inisialisasi Session HTTP dengan Connection Pooling & Auto-Retry
+        self.session = requests.Session()
+        retries = Retry(total=2, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
+        self.session.mount('https://', HTTPAdapter(max_retries=retries))
+        self.session.mount('http://', HTTPAdapter(max_retries=retries))
+        
+        # Headers lengkap menyerupai peramban desktop asli (anti blokir WAF / ModSecurity)
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (Educational WebMining-Bot)'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'id,en-US;q=0.9,en;q=0.8',
         }
         
     def _normalize_url(self, url):
@@ -233,13 +248,29 @@ class WebCrawler:
             )
             if parsed.path.lower().endswith(skip_ext):
                 return False
-            # Filter spam query / feeds / admin / wp-includes
             path_lower = parsed.path.lower()
             if any(bad in path_lower for bad in ['/wp-includes/', '/feed/', '/feed', '/trackback/']):
                 return False
             return True
         except:
             return False
+
+    def _fetch(self, url):
+        """Mengambil halaman dengan toleransi SSL dan fallback HTTP jika HTTPS bermasalah."""
+        try:
+            return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=True)
+        except requests.exceptions.SSLError:
+            # Fallback jika cert chain kampus bermasalah
+            return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=False)
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            # Coba fallback ke http jika https gagal/timeout
+            if url.startswith('https://'):
+                http_url = 'http://' + url[8:]
+                try:
+                    return self.session.get(http_url, headers=self.headers, timeout=self.timeout, allow_redirects=True)
+                except:
+                    pass
+            raise e
 
     def crawl(self, progress_callback=None):
         queue = deque([self._normalize_url(self.seed_url)])
@@ -248,7 +279,7 @@ class WebCrawler:
             if current_url in self.visited:
                 continue
             try:
-                response = requests.get(current_url, headers=self.headers, timeout=8, allow_redirects=True)
+                response = self._fetch(current_url)
                 
                 # 1. CEK STATUS CODE HTTP (Hanya proses HTTP 200 OK)
                 if response.status_code != 200:
@@ -270,7 +301,7 @@ class WebCrawler:
                     'tidak ditemukan', 'access denied', '403 forbidden'
                 ]
                 if any(sig in title_lower for sig in error_signatures):
-                    self.failed_urls.append((current_url, f"Soft-404 / Error: {title}"))
+                    self.failed_urls.append((current_url, f"Soft-404: {title}"))
                     continue
 
                 self.visited.add(current_url)
@@ -292,7 +323,14 @@ class WebCrawler:
                     progress_callback(len(self.visited), self.max_pages, current_url, title)
                 time.sleep(self.delay)
             except Exception as e:
-                self.failed_urls.append((current_url, str(e)))
+                err_msg = str(e)
+                if "Read timed out" in err_msg or "ConnectTimeout" in err_msg:
+                    err_clean = "Waktu koneksi habis (Timeout)"
+                elif "SSLError" in err_msg:
+                    err_clean = "Masalah Sertifikat SSL"
+                else:
+                    err_clean = err_msg[:60]
+                self.failed_urls.append((current_url, err_clean))
         return self.visited, self.edges, self.page_titles
 
 
@@ -437,7 +475,7 @@ with st.container():
         seed_url_input = st.text_input(
             "🌐 Seed URL Target (Halaman Awal):",
             value="",
-            placeholder="Masukkan URL, contoh: https://example.com atau https://www.trunojoyo.ac.id"
+            placeholder="Masukkan URL, contoh: https://example.com, https://uinsa.ac.id, https://www.trunojoyo.ac.id"
         )
     with col_c2:
         domain_filter_input = st.text_input(
@@ -450,7 +488,7 @@ with st.container():
     with col_p1:
         max_pages_input = st.slider("Maks Halaman:", min_value=5, max_value=80, value=25, step=5)
     with col_p2:
-        delay_input = st.slider("Jeda Request (detik):", min_value=0.1, max_value=2.0, value=0.5, step=0.1)
+        delay_input = st.slider("Jeda Request (detik):", min_value=0.1, max_value=2.0, value=0.4, step=0.1)
     with col_p3:
         damping_factor = st.slider("Damping Factor (d):", min_value=0.10, max_value=0.99, value=0.85, step=0.05)
 
@@ -484,6 +522,7 @@ if crawl_btn:
             seed_url=raw_seed,
             max_pages=max_pages_input,
             delay=delay_input,
+            timeout=16,
             allowed_domains=allowed_domains
         )
         
@@ -495,14 +534,15 @@ if crawl_btn:
             progress_bar.progress(pct)
             status_text.caption(f"[{current}/{total}] Mengunjungi: {title[:40]} ({url[:45]}...)")
             
-        with st.spinner("🕷️ Sedang melakukan crawling hyperlink & ekstraksi halaman..."):
+        with st.spinner(f"🕷️ Sedang melakukan crawling hyperlink pada {raw_seed}..."):
             visited, edges, titles = crawler.crawl(progress_callback=on_progress)
             
         progress_bar.empty()
         status_text.empty()
         
         if len(visited) == 0:
-            st.error(f"❌ Gagal mengambil halaman valid dari {raw_seed}. Pastikan URL aktif dan dapat diakses dari internet.")
+            err_reason = crawler.failed_urls[0][1] if crawler.failed_urls else "Server tidak merespons dalam batas waktu."
+            st.error(f"❌ Gagal mengambil halaman valid dari **{raw_seed}**.\n\n**Penyebab:** `{err_reason}`\n\n*Tips: Pastikan URL aktif, coba tanpa awalan `www.` (misal `https://uinsa.ac.id`), atau periksa koneksi internet server target.*")
         else:
             G_crawled = nx.DiGraph()
             G_crawled.add_nodes_from(visited)
@@ -518,7 +558,7 @@ if crawl_btn:
             }
             msg = f"✅ Crawling berhasil! {G_crawled.number_of_nodes()} simpul dan {G_crawled.number_of_edges()} busur berhasil dihubungkan."
             if crawler.failed_urls:
-                msg += f" (Sebanyak {len(crawler.failed_urls)} tautan rusak/404 berhasil otomatis disaring bersih)."
+                msg += f" (Sebanyak {len(crawler.failed_urls)} tautan rusak/404/timeout berhasil disaring bersih)."
             st.success(msg)
 
 
@@ -531,11 +571,11 @@ if st.session_state.graph_data is None:
         <div style='font-size: 3.2rem; margin-bottom: 12px;'>🕸️</div>
         <h3 style='color: #1e293b; margin-bottom: 8px;'>Belum Ada Jaringan Web yang Dianalisis</h3>
         <p style='color: #64748b; max-width: 620px; margin: 0 auto 18px auto; font-size: 0.96rem; line-height: 1.6;'>
-            Silakan masukkan <b>Seed URL Target</b> pada form di atas (contoh: website universitas, portal berita, atau dokumentasi resmi), 
+            Silakan masukkan <b>Seed URL Target</b> pada form di atas (contoh: website universitas seperti <code>https://uinsa.ac.id</code>, <code>https://www.its.ac.id</code>, atau <code>https://www.trunojoyo.ac.id</code>), 
             tentukan jumlah halaman maksimal, lalu klik tombol <b>🚀 Mulai Crawling & Bangun Graf</b>.
         </p>
         <span style='background: #e2e8f0; color: #334155; padding: 6px 16px; border-radius: 9999px; font-size: 0.85rem; font-weight: 600;'>
-            💡 Sistem dilengkapi filter anti-404 otomatis, tata letak Citation Graph Connected Papers yang tenang (statis), dan kalkulasi PageRank presisi.
+            💡 Dilengkapi Connection Pooling, toleransi latensi kampus lambat, filter anti-404 otomatis, dan visualisasi statis Connected Papers.
         </span>
     </div>
     """, unsafe_allow_html=True)
