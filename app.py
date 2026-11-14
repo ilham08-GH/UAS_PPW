@@ -119,7 +119,6 @@ def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
 # ==============================================================================
 # DETEKSI KOMUNITAS (CLUSTERING KELOMPOK ALA CONNECTED PAPERS)
 # ==============================================================================
-# Palet warna komunitas khas Connected Papers
 COMMUNITY_PALETTE = [
     '#3b82f6',  # Biru
     '#10b981',  # Hijau Emerald
@@ -141,7 +140,6 @@ def detect_communities(G):
     if G_undir.number_of_nodes() == 0:
         return {}
     try:
-        # Louvain Community Detection
         comm_list = list(nx.community.louvain_communities(G_undir, seed=42))
     except Exception:
         try:
@@ -157,20 +155,23 @@ def detect_communities(G):
 
 
 # ==============================================================================
-# FUNGSI HELPER: NAMA HALAMAN DESKRIPTIF
+# FUNGSI HELPER: NAMA HALAMAN DESKRIPTIF & BERSIH
 # ==============================================================================
 def get_page_name(url, page_titles=None, max_len=30):
-    """Menghasilkan nama halaman manusiawi dari <title>, subdomain, atau slug path."""
+    """Menghasilkan nama halaman manusiawi dari <title>, subdomain, atau slug path yang bersih."""
     parsed = urlparse(url)
     if page_titles and url in page_titles:
         title = str(page_titles[url]).strip()
-        for sep in [' - ', ' | ', ' — ']:
+        # Bersihkan pemisah judul umum
+        for sep in [' - ', ' | ', ' — ', ' :: ']:
             if sep in title:
                 parts = title.split(sep)
                 if len(parts[0]) > 3:
                     title = parts[0].strip()
+        # Pastikan bukan string error
         if title and title != '-' and title != url and not title.startswith('http'):
-            return title[:max_len]
+            if not any(err in title.lower() for err in ['not found', 'error 404', 'tidak ditemukan', '404 error']):
+                return title[:max_len]
             
     netloc = parsed.netloc.replace('www.', '')
     path = parsed.path.strip('/')
@@ -180,9 +181,13 @@ def get_page_name(url, page_titles=None, max_len=30):
     
     if path:
         last_slug = path.split('/')[-1]
+        last_slug = last_slug.replace('.html', '').replace('.htm', '').replace('.php', '')
+        clean_slug = last_slug.replace('-', ' ').title()
+        if len(clean_slug) > max_len:
+            clean_slug = clean_slug[:max_len-3] + '...'
         if subdomain:
-            return f"[{subdomain}] /{last_slug}"[:max_len]
-        return f"/{last_slug}"[:max_len]
+            return f"[{subdomain}] {clean_slug}"[:max_len]
+        return clean_slug[:max_len]
     else:
         if subdomain:
             return f"[{subdomain}] Beranda"[:max_len]
@@ -190,7 +195,7 @@ def get_page_name(url, page_titles=None, max_len=30):
 
 
 # ==============================================================================
-# KELAS WEB CRAWLER (BFS)
+# KELAS WEB CRAWLER (BFS) DENGAN FILTER 404 & ERROR PAGE KETAT
 # ==============================================================================
 class WebCrawler:
     def __init__(self, seed_url, max_pages=30, delay=0.5, allowed_domains=None):
@@ -210,8 +215,8 @@ class WebCrawler:
         
     def _normalize_url(self, url):
         parsed = urlparse(url)
-        normalized = f"{parsed.scheme}://{parsed.netloc}{parsed.path}".rstrip('/')
-        return normalized
+        path = parsed.path.rstrip('/')
+        return f"{parsed.scheme}://{parsed.netloc}{path}"
 
     def _is_valid_url(self, url):
         try:
@@ -220,8 +225,17 @@ class WebCrawler:
                 return False
             if not any(d in parsed.netloc for d in self.allowed_domains):
                 return False
-            skip_ext = ('.pdf', '.jpg', '.png', '.gif', '.zip', '.docx', '.xlsx', '.css', '.js', '.svg', '.mp4')
+            skip_ext = (
+                '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar', 
+                '.docx', '.xlsx', '.pptx', '.css', '.js', '.svg', '.mp4', 
+                '.mp3', '.ico', '.xml', '.rss', '.json', '.webp', '.woff', '.woff2',
+                '.exe', '.dmg', '.tar', '.gz'
+            )
             if parsed.path.lower().endswith(skip_ext):
+                return False
+            # Filter spam query / feeds / admin / wp-includes
+            path_lower = parsed.path.lower()
+            if any(bad in path_lower for bad in ['/wp-includes/', '/feed/', '/feed', '/trackback/']):
                 return False
             return True
         except:
@@ -234,14 +248,32 @@ class WebCrawler:
             if current_url in self.visited:
                 continue
             try:
-                response = requests.get(current_url, headers=self.headers, timeout=8)
+                response = requests.get(current_url, headers=self.headers, timeout=8, allow_redirects=True)
+                
+                # 1. CEK STATUS CODE HTTP (Hanya proses HTTP 200 OK)
+                if response.status_code != 200:
+                    self.failed_urls.append((current_url, f"HTTP {response.status_code}"))
+                    continue
+                    
                 if 'text/html' not in response.headers.get('Content-Type', ''):
                     continue
-                self.visited.add(current_url)
                 
                 soup = BeautifulSoup(response.text, 'html.parser')
                 title_tag = soup.find('title')
                 title = title_tag.get_text(strip=True) if title_tag else current_url
+                
+                # 2. FILTER SOFT-404 & ERROR PAGE
+                title_lower = title.lower()
+                error_signatures = [
+                    'page not found', '404 not found', 'halaman tidak ditemukan', 
+                    'error 404', 'not found', '404 error', 'laman tidak ditemukan', 
+                    'tidak ditemukan', 'access denied', '403 forbidden'
+                ]
+                if any(sig in title_lower for sig in error_signatures):
+                    self.failed_urls.append((current_url, f"Soft-404 / Error: {title}"))
+                    continue
+
+                self.visited.add(current_url)
                 self.page_titles[current_url] = title
                 
                 found_links = set()
@@ -265,38 +297,37 @@ class WebCrawler:
 
 
 # ==============================================================================
-# FUNGSI MEMBANGUN CITATION GRAPH BERGAYA CONNECTED PAPERS (HTML)
+# FUNGSI MEMBANGUN CITATION GRAPH BERGAYA CONNECTED PAPERS (TENANG & STATIS)
 # ==============================================================================
 def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url,
                                     color_mode="Klaster Komunitas (Connected Papers)",
                                     size_multiplier=1.0, spring_spacing=100,
-                                    show_all_labels=False):
+                                    show_all_labels=False, freeze_physics=True):
     """
     Menghasilkan graf interaktif bergaya Connected Papers:
     - Background putih bersih (#ffffff)
     - Node dikelompokkan ke dalam klaster warna komunitas
-    - Node pusat (seed/Top-1) berwarna Charcoal gelap (#1e293b) seperti di Connected Papers
+    - Node pusat (seed/Top-1) berwarna Charcoal gelap (#1e293b)
     - Garis edges abu-abu lembut (#cbd5e1)
-    - Tata letak ForceAtlas2 untuk spatial clustering alami
+    - Tata letak ForceAtlas2 dengan opsi Kunci Posisi (Statis / Tidak Bergerak)
     """
     net = Network(height='720px', width='100%', directed=True,
                   bgcolor='#ffffff', font_color='#1e293b', cdn_resources='remote')
     
-    # Gunakan ForceAtlas2Based physics: algoritma pemetaan klaster ilmiah (Gephi / Connected Papers)
+    # Gunakan ForceAtlas2Based physics: stabilisasi cepat & teratur
     net.force_atlas_2based(
         gravity=-50,
         central_gravity=0.015,
         spring_length=spring_spacing,
-        spring_strength=0.07,
-        damping=0.45,
-        overlap=0.15
+        spring_strength=0.08,
+        damping=0.75,
+        overlap=0.20
     )
 
     max_pr = max(pr_scores.values()) if pr_scores else 1
     min_pr = min(pr_scores.values()) if pr_scores else 0
     denom = (max_pr - min_pr) if (max_pr - min_pr) > 0 else 1
     
-    # Deteksi komunitas untuk pewarnaan klaster
     node_communities = detect_communities(G)
     top_nodes = [u for u, _ in ranking[:8]]
     top1_node = ranking[0][0] if ranking else seed_url
@@ -305,7 +336,6 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
         pr_val = pr_scores.get(node, 0)
         norm_val = (pr_val - min_pr) / denom
         
-        # Ukuran node proporsional dengan skala ukuran (importance)
         node_size = (14 + (norm_val ** 0.8) * 45) * size_multiplier
         
         title_full = page_titles.get(node, node)
@@ -315,9 +345,8 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
         rank_str = f"Rank #{rank_pos[0]}" if rank_pos else ""
         comm_id = node_communities.get(node, 0)
 
-        # 1. PEWARNAAN ALA CONNECTED PAPERS:
+        # Pewarnaan ala Connected Papers:
         if node == top1_node or node == seed_url:
-            # Simpul Seed / Top-1 berwarna Dark Charcoal (#1e293b) dengan font kontras
             node_color = '#1e293b'
             border_color = '#0f172a'
             font_color = '#ffffff' if node_size > 28 else '#1e293b'
@@ -326,7 +355,6 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
             border_color = node_color
             font_color = '#0f172a'
         else:
-            # Gradasi PageRank (Merah = Tinggi, Biru = Rendah)
             r = int(59 + norm_val * 180)
             g = int(130 - norm_val * 80)
             b = int(246 - norm_val * 180)
@@ -334,13 +362,11 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
             border_color = '#334155'
             font_color = '#0f172a'
 
-        # Tampilkan label hanya pada node penting atau jika opsi 'show_all_labels' aktif
         if show_all_labels or node in top_nodes or node == top1_node:
             node_label = name_short
         else:
             node_label = ""
 
-        # Tooltip Hover yang Informatif & Elegan
         hover_html = (
             f"<div style='font-family: Inter, system-ui, sans-serif; padding: 6px; font-size: 12px; line-height: 1.4;'>"
             f"<b style='color: #0f172a; font-size: 13px;'>{title_full}</b><br>"
@@ -364,7 +390,6 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
             font={'size': 11, 'color': font_color, 'face': 'Inter, sans-serif', 'strokeWidth': 2, 'strokeColor': '#ffffff'}
         )
 
-    # Tambahkan Edges (Garis Halus Abu-abu Muda ala Connected Papers)
     for source, target in G.edges():
         is_highlight = target in top_nodes[:3]
         edge_color = '#94a3b8' if is_highlight else '#cbd5e1'
@@ -378,7 +403,21 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
             smooth={'type': 'continuous', 'roundness': 0.15}
         )
 
-    return net.generate_html()
+    html_out = net.generate_html()
+
+    # Kunci posisi graf jika mode statis aktif (agar tidak bergoyang / bergerak-gerak)
+    if freeze_physics:
+        freeze_script = """
+        network.once("stabilized", function() {
+            network.setOptions({ physics: false });
+        });
+        network.once("stabilizationIterationsDone", function() {
+            network.setOptions({ physics: false });
+        });
+        """
+        html_out = html_out.replace("return network;", f"{freeze_script}\n        return network;")
+
+    return html_out
 
 
 # ==============================================================================
@@ -463,7 +502,7 @@ if crawl_btn:
         status_text.empty()
         
         if len(visited) == 0:
-            st.error(f"❌ Gagal mengambil halaman dari {raw_seed}. Pastikan URL aktif, dapat diakses dari internet, dan domain sesuai.")
+            st.error(f"❌ Gagal mengambil halaman valid dari {raw_seed}. Pastikan URL aktif dan dapat diakses dari internet.")
         else:
             G_crawled = nx.DiGraph()
             G_crawled.add_nodes_from(visited)
@@ -474,9 +513,13 @@ if crawl_btn:
             st.session_state.graph_data = {
                 'G': G_crawled,
                 'titles': titles,
-                'seed': raw_seed
+                'seed': raw_seed,
+                'failed_count': len(crawler.failed_urls)
             }
-            st.success(f"✅ Crawling berhasil! {G_crawled.number_of_nodes()} simpul dan {G_crawled.number_of_edges()} busur berhasil dihubungkan.")
+            msg = f"✅ Crawling berhasil! {G_crawled.number_of_nodes()} simpul dan {G_crawled.number_of_edges()} busur berhasil dihubungkan."
+            if crawler.failed_urls:
+                msg += f" (Sebanyak {len(crawler.failed_urls)} tautan rusak/404 berhasil otomatis disaring bersih)."
+            st.success(msg)
 
 
 # ==============================================================================
@@ -492,7 +535,7 @@ if st.session_state.graph_data is None:
             tentukan jumlah halaman maksimal, lalu klik tombol <b>🚀 Mulai Crawling & Bangun Graf</b>.
         </p>
         <span style='background: #e2e8f0; color: #334155; padding: 6px 16px; border-radius: 9999px; font-size: 0.85rem; font-weight: 600;'>
-            💡 Sistem akan melakukan web crawling BFS, memetakan Citation Graph ala Connected Papers, serta menghitung PageRank otomatis.
+            💡 Sistem dilengkapi filter anti-404 otomatis, tata letak Citation Graph Connected Papers yang tenang (statis), dan kalkulasi PageRank presisi.
         </span>
     </div>
     """, unsafe_allow_html=True)
@@ -594,11 +637,10 @@ tab1, tab2, tab3, tab4 = st.tabs([
 
 
 # ==============================================================================
-# TAB 1: CITATION GRAPH BERGAYA CONNECTED PAPERS
+# TAB 1: CITATION GRAPH BERGAYA CONNECTED PAPERS (TENANG & STATIS)
 # ==============================================================================
 with tab1:
-    # Toolbar Kontrol di Atas Graf (Mirip Tombol Connected Papers)
-    col_t1, col_t2, col_t3, col_t4 = st.columns([3, 2, 2, 2])
+    col_t1, col_t2, col_t3, col_t4 = st.columns([3, 2, 2, 3])
     with col_t1:
         color_choice = st.selectbox(
             "🎨 Skema Warna Simpul:",
@@ -607,25 +649,26 @@ with tab1:
     with col_t2:
         size_scale = st.slider("Ukuran Simpul (Importance):", 0.5, 2.0, 1.0, 0.1)
     with col_t3:
-        spacing_scale = st.slider("Jarak Klaster (Spacing):", 60, 200, 110, 10)
+        spacing_scale = st.slider("Jarak Klaster (Spacing):", 60, 200, 100, 10)
     with col_t4:
-        st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+        freeze_toggle = st.checkbox("🔒 Kunci Posisi Graf (Tenang / Tidak Bergerak)", value=True,
+                                    help="Jika aktif, posisi simpul langsung dikunci setelah susunan klaster terbentuk sehingga graf tidak bergoyang-goyang.")
         show_all_lbl = st.checkbox("Tampilkan Semua Judul", value=False)
 
-    # Render Visualisasi Interaktif PyVis
     html_graph = generate_connected_papers_graph(
         G, pr_scores, ranking, titles, seed_url,
         color_mode=color_choice,
         size_multiplier=size_scale,
         spring_spacing=spacing_scale,
-        show_all_labels=show_all_lbl
+        show_all_labels=show_all_lbl,
+        freeze_physics=freeze_toggle
     )
     
     st.markdown("<div class='graph-container'>", unsafe_allow_html=True)
     components.html(html_graph, height=720, scrolling=False)
     st.markdown("</div>", unsafe_allow_html=True)
     
-    # Legend Panduan Visual
     st.markdown(f"""
     **Keterangan Visual (Gaya Connected Papers):**
     - ⚫ **Simpul Hitam/Charcoal ({best_title}):** Simpul pusat / jangkar utama jaringan web (*Seed Paper/Top Node*).
@@ -655,7 +698,6 @@ with tab2:
     df_top10 = pd.DataFrame(top10_rows)
     st.dataframe(df_top10, use_container_width=True, hide_index=True)
     
-    # Horizontal Bar Chart
     if len(ranking) > 0:
         st.markdown("#### Perbandingan Skor PageRank Top-10")
         fig, ax = plt.subplots(figsize=(10, 4.5))
