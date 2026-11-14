@@ -178,7 +178,7 @@ st.markdown("""
         margin-top: 25px;
     }
 
-    /* Override Input, Tombol, dan Tab Bawaan Streamlit */
+    /* Override Input, Tombol */
     div[data-testid="stTextInput"] input {
         background-color: #f4ece1 !important;
         border: 2px solid #1f1a16 !important;
@@ -216,28 +216,47 @@ st.markdown("""
         background-color: #9e4b2a !important;
     }
 
-    /* Tab Bergaya Folder Karton */
+    /* ==========================================================
+       PENGATURAN TAB KARTON TEGAS (NEOBRUTALISM STYLE)
+       ========================================================== */
+    div[data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: transparent !important;
+        border-bottom: none !important;
+    }
+
     button[data-baseweb="tab"] {
         background-color: #d6bc97 !important;
-        border: 2px solid #1f1a16 !important;
-        border-bottom: none !important;
+        border: 2.5px solid #1f1a16 !important;
         border-radius: 0px !important;
-        margin-right: 6px !important;
-        padding: 10px 18px !important;
+        box-shadow: 3px 3px 0px #1f1a16 !important;
+        padding: 10px 16px !important;
         font-family: 'Space Mono', monospace !important;
         font-weight: 700 !important;
         color: #1f1a16 !important;
+        transition: all 0.1s ease !important;
     }
+
+    button[data-baseweb="tab"]:hover {
+        background-color: #c4a982 !important;
+        transform: translate(-1px, -1px);
+        box-shadow: 4px 4px 0px #1f1a16 !important;
+    }
+
     button[data-baseweb="tab"][aria-selected="true"] {
         background-color: #f4ece1 !important;
-        box-shadow: 3px -3px 0px #1f1a16 !important;
         color: #b85d38 !important;
+        border-bottom: 2.5px solid #f4ece1 !important;
+        box-shadow: 4px 4px 0px #1f1a16 !important;
+        transform: translate(-2px, -2px);
     }
+
     div[data-testid="stTabs"] > div[role="tabpanel"] {
-        background-color: #dfd1bd;
+        background-color: #f4ece1;
         border: 3px solid #1f1a16;
-        box-shadow: 6px 6px 0px #1f1a16;
-        padding: 22px;
+        box-shadow: 7px 7px 0px #1f1a16;
+        padding: 24px;
+        margin-top: -2px;
     }
 
     label, .stMarkdown p, .stMarkdown li {
@@ -257,7 +276,6 @@ st.markdown("""
 # FUNGSI PAGERANK ROBUST (BEBAS ERROR SCIPY)
 # ==============================================================================
 def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
-    """Menghitung PageRank dengan NetworkX, fallback otomatis ke Power Iteration murni jika SciPy absen."""
     try:
         return nx.pagerank(G, alpha=alpha, max_iter=max_iter, tol=tol)
     except Exception:
@@ -281,25 +299,15 @@ def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
 
 
 # ==============================================================================
-# DETEKSI KOMUNITAS (PALET TINTA CETAK INDUSTRIAL DI ATAS KARDUS)
+# DETEKSI KOMUNITAS
 # ==============================================================================
 COMMUNITY_PALETTE = [
-    '#b85d38',  # Rust Terracotta
-    '#3b6e5c',  # Industrial Forest Green
-    '#d48c29',  # Mustard Ochre
-    '#2f5266',  # Slate Petrol
-    '#8c3f4d',  # Faded Crimson
-    '#6b5b3e',  # Olive Bark
-    '#4a6b82',  # Steel Blue
-    '#a35c37',  # Burnt Sienna
-    '#526b44',  # Moss Stamp
-    '#7a496b',  # Vintage Plum
-    '#9c6b30',  # Raw Umber
-    '#3d5a58'   # Deep Teal
+    '#b85d38', '#3b6e5c', '#d48c29', '#2f5266',
+    '#8c3f4d', '#6b5b3e', '#4a6b82', '#a35c37',
+    '#526b44', '#7a496b', '#9c6b30', '#3d5a58'
 ]
 
 def detect_communities(G):
-    """Deteksi komunitas/klaster simpul menggunakan algoritma Louvain atau Modularity."""
     G_undir = G.to_undirected()
     if G_undir.number_of_nodes() == 0:
         return {}
@@ -322,7 +330,6 @@ def detect_communities(G):
 # FUNGSI HELPER: NAMA HALAMAN DESKRIPTIF & BERSIH
 # ==============================================================================
 def get_page_name(url, page_titles=None, max_len=30):
-    """Menghasilkan nama halaman manusiawi dari <title>, subdomain, atau slug path yang bersih."""
     parsed = urlparse(url)
     if page_titles and url in page_titles:
         title = str(page_titles[url]).strip()
@@ -337,7 +344,6 @@ def get_page_name(url, page_titles=None, max_len=30):
             
     netloc = parsed.netloc.replace('www.', '')
     path = parsed.path.strip('/')
-    
     netloc_parts = netloc.split('.')
     subdomain = netloc_parts[0] if len(netloc_parts) > 2 else ""
     
@@ -357,7 +363,7 @@ def get_page_name(url, page_titles=None, max_len=30):
 
 
 # ==============================================================================
-# KELAS WEB CRAWLER ROBUST (SESSION, RETRY, TIMEOUT PANJANG & FILTER 404)
+# KELAS WEB CRAWLER ROBUST
 # ==============================================================================
 class WebCrawler:
     def __init__(self, seed_url, max_pages=30, delay=0.4, timeout=16, allowed_domains=None):
@@ -412,7 +418,6 @@ class WebCrawler:
             return False
 
     def _fetch(self, url):
-        """Mengambil halaman dengan toleransi SSL dan fallback HTTP jika HTTPS bermasalah."""
         try:
             return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=True)
         except requests.exceptions.SSLError:
@@ -434,11 +439,9 @@ class WebCrawler:
                 continue
             try:
                 response = self._fetch(current_url)
-                
                 if response.status_code != 200:
                     self.failed_urls.append((current_url, f"HTTP {response.status_code}"))
                     continue
-                    
                 if 'text/html' not in response.headers.get('Content-Type', ''):
                     continue
                 
@@ -487,16 +490,12 @@ class WebCrawler:
 
 
 # ==============================================================================
-# FUNGSI MEMBANGUN CITATION GRAPH BERGAYA KERTAS KARDUS
+# FUNGSI MEMBANGUN CITATION GRAPH
 # ==============================================================================
 def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url,
                                     color_mode="Klaster Komunitas (Connected Papers)",
                                     size_multiplier=1.0, spring_spacing=100,
                                     show_all_labels=False, freeze_physics=True):
-    """
-    Menghasilkan graf interaktif di atas kanvas kertas unbleached (#f4ece1)
-    dengan border hitam tegas ala potongan pin kardus.
-    """
     net = Network(height='720px', width='100%', directed=True,
                   bgcolor='#f4ece1', font_color='#1f1a16', cdn_resources='remote')
     
@@ -520,7 +519,6 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
     for node in G.nodes():
         pr_val = pr_scores.get(node, 0)
         norm_val = (pr_val - min_pr) / denom
-        
         node_size = (14 + (norm_val ** 0.8) * 45) * size_multiplier
         
         title_full = page_titles.get(node, node)
@@ -600,7 +598,7 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
 
 
 # ==============================================================================
-# HEADER UTAMA (KOTAK KARDUS DENGAN LAKBAN)
+# HEADER UTAMA
 # ==============================================================================
 st.markdown("""
 <div class='cardboard-header' style='text-align: center;'><div class='main-title'>[ NodeCraft ]</div></div>
@@ -700,7 +698,7 @@ if crawl_btn:
 
 
 # ==============================================================================
-# TAMPILAN AWAL JIKA BELUM ADA DATA (EMPTY STATE KARDUS)
+# TAMPILAN AWAL JIKA BELUM ADA DATA (EMPTY STATE)
 # ==============================================================================
 if st.session_state.graph_data is None:
     st.markdown("""
@@ -753,7 +751,7 @@ best_pr = ranking[0][1] if ranking else 0.0
 
 
 # ==============================================================================
-# DASHBOARD METRIC CARDS (POTONGAN KARTON)
+# DASHBOARD METRIC CARDS
 # ==============================================================================
 st.markdown("<br>", unsafe_allow_html=True)
 col1, col2, col3, col4, col5 = st.columns(5)
@@ -797,7 +795,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 
 # ==============================================================================
-# TABS NAVIGASI (FOLDER KARTON)
+# TABS NAVIGASI
 # ==============================================================================
 tab1, tab2, tab3, tab4 = st.tabs([
     "01 // CITATION GRAPH",
@@ -805,59 +803,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "03 // SMALL-WORLD ANALYSIS",
     "04 // EKSPOR DATA LAB"
 ])
-# ==============================================================================
-# CUSTOM STYLING: CARDBOARD / KRAFT BOX NEOBRUTALISM (ANTI AI-SLOP)
-# ==============================================================================
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@500;700;800&display=swap');
 
-    /* ... (CSS lainnya seperti stApp, cardboard-header, dll) ... */
-
-    /* ==========================================================
-       PENGATURAN TAB KARTON TEGAS (YANG DITAMBAHKAN)
-       ========================================================== */
-    div[data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: transparent !important;
-        border-bottom: none !important;
-    }
-
-    button[data-baseweb="tab"] {
-        background-color: #d6bc97 !important;
-        border: 2.5px solid #1f1a16 !important;
-        border-radius: 0px !important;
-        box-shadow: 3px 3px 0px #1f1a16 !important;
-        padding: 10px 16px !important;
-        font-family: 'Space Mono', monospace !important;
-        font-weight: 700 !important;
-        color: #1f1a16 !important;
-        transition: all 0.1s ease !important;
-    }
-
-    button[data-baseweb="tab"]:hover {
-        background-color: #c4a982 !important;
-        transform: translate(-1px, -1px);
-        box-shadow: 4px 4px 0px #1f1a16 !important;
-    }
-
-    button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #f4ece1 !important;
-        color: #b85d38 !important;
-        border-bottom: 2.5px solid #f4ece1 !important;
-        box-shadow: 4px 4px 0px #1f1a16 !important;
-        transform: translate(-2px, -2px);
-    }
-
-    div[data-testid="stTabs"] > div[role="tabpanel"] {
-        background-color: #f4ece1;
-        border: 3px solid #1f1a16;
-        box-shadow: 7px 7px 0px #1f1a16;
-        padding: 24px;
-        margin-top: -2px;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # ==============================================================================
 # TAB 1: CITATION GRAPH
