@@ -811,18 +811,12 @@ st.markdown("""
 # PANEL PENGATURAN & FORM CRAWLING
 # ==============================================================================
 with st.container():
-    col_c1, col_c2 = st.columns([3, 2])
+    col_c1 = st.columns([3, 2])
     with col_c1:
         seed_url_input = st.text_input(
             "SEED URL TARGET (HALAMAN AWAL):",
             value="",
             placeholder="Masukkan URL"
-        )
-    with col_c2:
-        domain_filter_input = st.text_input(
-            "BATASAN DOMAIN (OPSIONAL):",
-            value="",
-            placeholder="Kosongkan untuk otomatis mengikuti domain Seed URL"
         )
 
     col_p1, col_p2, col_p3 = st.columns([1, 1, 1])
@@ -1002,9 +996,11 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==============================================================================
 # TABS NAVIGASI (FOLDER KARTON)
 # ==============================================================================
-tab1, tab2 = st.tabs([
-    "01 // CITATION GRAPH",
+tab1, tab2, tab3= st.tabs([
+    "01 // GRAPH",
     "02 // TOP-10 PAGERANK"
+    "03 // MATRIX ADJACENCY"
+    
 ])
 
 
@@ -1112,3 +1108,16 @@ with tab2:
         ax.set_xlim(0, max_val * 1.15)
         plt.tight_layout()
         st.pyplot(fig)
+
+with tab3:
+    st.markdown("#### TABEL MATRIKS ADJACENCY (KONEKSI ANTAR SIMPUL)")
+    st.write("Angka **1** menunjukkan adanya tautan (link) dari baris ke kolom, sedangkan **0** berarti tidak ada tautan.")
+    
+    # Konversi graf NetworkX menjadi Pandas DataFrame (Matriks Adjacency)
+    adj_matrix = nx.to_pandas_adjacency(G, dtype=int)
+    
+    # Ubah nama kolom dan index menjadi nama halaman yang lebih pendek agar rapi
+    short_names = {node: get_page_name(node, titles, max_len=15) for node in G.nodes()}
+    adj_matrix.rename(index=short_names, columns=short_names, inplace=True)
+    
+    st.dataframe(adj_matrix, use_container_width=True)
