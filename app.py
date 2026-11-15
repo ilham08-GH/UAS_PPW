@@ -1109,8 +1109,22 @@ with tab3:
     # Konversi graf NetworkX menjadi Pandas DataFrame (Matriks Adjacency)
     adj_matrix = nx.to_pandas_adjacency(G, dtype=int)
     
-    # Ubah nama kolom dan index menjadi nama halaman yang lebih pendek agar rapi
-    short_names = {node: get_page_name(node, titles, max_len=15) for node in G.nodes()}
+    # Buat nama pendek unik agar tidak terjadi error kolom duplikat di Streamlit/PyArrow
+    short_names = {}
+    seen_names = {}
+    
+    for node in G.nodes():
+        name = get_page_name(node, titles, max_len=15)
+        # Jika nama sudah ada, tambahkan angka counter di belakangnya
+        if name in seen_names:
+            seen_names[name] += 1
+            short_names[node] = f"{name} ({seen_names[name]})"
+        else:
+            seen_names[name] = 1
+            short_names[node] = name
+            
+    # Terapkan nama unik ke baris dan kolom
     adj_matrix.rename(index=short_names, columns=short_names, inplace=True)
     
+    # Tampilkan ke layar
     st.dataframe(adj_matrix, use_container_width=True)
