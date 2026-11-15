@@ -992,24 +992,31 @@ tab1, tab2, tab3 = st.tabs([
 # ==============================================================================
 # TAB 1: CITATION GRAPH
 # ==============================================================================
+# ==============================================================================
+# TAB 1: CITATION GRAPH
+# ==============================================================================
 with tab1:
-    col_t1= st.columns([3, 2])
-    with col_t1, col_t2:
+    col_t1, col_t2 = st.columns([3, 2])
+    
+    with col_t1:
         color_choice = st.selectbox(
             "SKEMA WARNA SIMPUL:",
             ["Klaster Komunitas (Connected Papers)", "Gradasi Skor PageRank"]
         )
+        
     with col_t2:
-        st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+        # Menambahkan spasi kosong agar kotak centang sejajar dengan selectbox
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
         show_all_lbl = st.checkbox("TAMPILKAN SEMUA JUDUL", value=False)
 
+    # Memanggil fungsi graf dengan nilai bawaan statis karena slider dihapus
     html_graph = generate_connected_papers_graph(
         G, pr_scores, ranking, titles, seed_url,
         color_mode=color_choice,
-        size_multiplier=size_scale,
-        spring_spacing=spacing_scale,
+        size_multiplier=1.0,         # Nilai default ukuran simpul
+        spring_spacing=150,          # Nilai default jarak klaster agar tidak ruwet
         show_all_labels=show_all_lbl,
-        freeze_physics=freeze_toggle
+        freeze_physics=True          # Posisi graf statis (tidak bergoyang)
     )
     
     st.markdown("<div class='graph-container'>", unsafe_allow_html=True)
