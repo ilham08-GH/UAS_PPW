@@ -993,7 +993,7 @@ tab1, tab2, tab3 = st.tabs([
 # TAB 1: CITATION GRAPH
 # ==============================================================================
 with tab1:
-    col_t1= st.columns([3, 2, 2, 3])
+    col_t1= st.columns([3, 2])
     with col_t1, col_t2:
         color_choice = st.selectbox(
             "SKEMA WARNA SIMPUL:",
