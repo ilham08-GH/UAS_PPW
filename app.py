@@ -1103,7 +1103,8 @@ with tab2:
 # TAB 3: ADJACENCY MATRIX (MATRIKS KETETANGGAAN)
 # ==============================================================================
 with tab3:
-    st.markdown("#### TABEL MATRIKS ADJACENCY (KONEKSI ANTAR SIMPUL)")    
+    st.markdown("#### TABEL MATRIKS ADJACENCY (KONEKSI ANTAR SIMPUL)")
+    
     # Konversi graf NetworkX menjadi Pandas DataFrame (Matriks Adjacency)
     adj_matrix = nx.to_pandas_adjacency(G, dtype=int)
     
@@ -1125,64 +1126,63 @@ with tab3:
     adj_matrix.rename(index=short_names, columns=short_names, inplace=True)
     
     # --- CUSTOM STYLING TABEL KARDUS ---
-    # Konversi DataFrame ke struktur HTML
     html_table = adj_matrix.to_html(classes="cardboard-table", border=0)
     
     # Highlight angka 1 dan pudarkan angka 0 agar mudah dibaca
     html_table = html_table.replace('<td>1</td>', '<td style="color: #b85d38; font-weight: 900; font-size: 1.15rem;">1</td>')
     html_table = html_table.replace('<td>0</td>', '<td style="color: #8c7a66; opacity: 0.4;">0</td>')
     
-    # Tampilkan tabel dengan kotak pembungkus kustom
-    st.markdown(f"""
-    <style>
-        .table-container {{
-            overflow-x: auto;
-            background-color: #f4ece1;
-            border: 3px solid #1f1a16;
-            box-shadow: 7px 7px 0px #1f1a16;
-            margin-top: 15px;
-            margin-bottom: 25px;
-        }}
-        .cardboard-table {{
-            width: 100%;
-            border-collapse: collapse;
-            font-family: 'Space Mono', monospace;
-            font-size: 0.85rem;
-            color: #1f1a16;
-        }}
-        .cardboard-table th {{
-            background-color: #d6bc97;
-            border: 2px solid #1f1a16;
-            padding: 10px 14px;
-            font-weight: 700;
-            text-align: center;
-            white-space: nowrap;
-        }}
-        .cardboard-table td {{
-            border: 2px solid #1f1a16;
-            padding: 10px;
-            text-align: center;
-            font-weight: 700;
-        }}
-        /* Buat kolom pertama (nama halaman) tetap terlihat saat digeser ke kanan */
-        .cardboard-table tbody th {{
-            background-color: #d6bc97;
-            text-align: left;
-            position: sticky;
-            left: 0;
-            z-index: 1;
-        }}
-        .cardboard-table thead th:first-child {{
-            position: sticky;
-            left: 0;
-            z-index: 2;
-        }}
-        .cardboard-table tbody tr:hover td, .cardboard-table tbody tr:hover th {{
-            background-color: #e6dac8;
-        }}
-    </style>
+    # PERHATIKAN: HTML di bawah ini diratakan ke ujung kiri agar Markdown tidak merendernya sebagai Code Block
+    custom_html = f"""
+<style>
+.table-container {{
+    overflow-x: auto;
+    background-color: #f4ece1;
+    border: 3px solid #1f1a16;
+    box-shadow: 7px 7px 0px #1f1a16;
+    margin-top: 15px;
+    margin-bottom: 25px;
+}}
+.cardboard-table {{
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: #1f1a16;
+}}
+.cardboard-table th {{
+    background-color: #d6bc97;
+    border: 2px solid #1f1a16;
+    padding: 10px 14px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+}}
+.cardboard-table td {{
+    border: 2px solid #1f1a16;
+    padding: 10px;
+    text-align: center;
+    font-weight: 700;
+}}
+.cardboard-table tbody th {{
+    background-color: #d6bc97;
+    text-align: left;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}}
+.cardboard-table thead th:first-child {{
+    position: sticky;
+    left: 0;
+    z-index: 2;
+}}
+.cardboard-table tbody tr:hover td, .cardboard-table tbody tr:hover th {{
+    background-color: #e6dac8;
+}}
+</style>
+<div class="table-container">
+{html_table}
+</div>
+"""
     
-    <div class="table-container">
-        {html_table}
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(custom_html, unsafe_allow_html=True)
