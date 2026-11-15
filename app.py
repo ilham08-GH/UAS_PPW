@@ -811,13 +811,12 @@ st.markdown("""
 # PANEL PENGATURAN & FORM CRAWLING
 # ==============================================================================
 with st.container():
-    col_c1 = st.columns([3, 2])
-    with col_c1:
-        seed_url_input = st.text_input(
-            "SEED URL TARGET (HALAMAN AWAL):",
-            value="",
-            placeholder="Masukkan URL"
-        )
+    # Langsung jadikan input tanpa kolom agar tampil penuh dan rapi
+    seed_url_input = st.text_input(
+        "SEED URL TARGET (HALAMAN AWAL):",
+        value="",
+        placeholder="Masukkan URL (contoh: https://uinsa.ac.id)"
+    )
 
     col_p1, col_p2, col_p3 = st.columns([1, 1, 1])
     with col_p1:
@@ -847,11 +846,8 @@ if crawl_btn:
         parsed_seed = urlparse(raw_seed)
         seed_domain = parsed_seed.netloc.replace('www.', '')
         
-        raw_filter = domain_filter_input.strip()
-        if raw_filter:
-            allowed_domains = [d.strip() for d in raw_filter.split(',') if d.strip()]
-        else:
-            allowed_domains = [seed_domain]
+        # Karena input batasan domain dihapus, kita set otomatis filter hanya ke domain utama
+        allowed_domains = [seed_domain]
             
         crawler = WebCrawler(
             seed_url=raw_seed,
