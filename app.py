@@ -794,7 +794,7 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
         """
         html_out = html_out.replace("return network;", f"{freeze_script}\n        return network;")
 
-    return html_out    return html_out
+    return html_out
 
 
 # ==============================================================================
