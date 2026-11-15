@@ -992,11 +992,14 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==============================================================================
 # TABS NAVIGASI (FOLDER KARTON)
 # ==============================================================================
-tab1, tab2, tab3= st.tabs([
-    "01 // GRAPH",
-    "02 // TOP-10 PAGERANK"
-    "03 // MATRIX ADJACENCY"
-    
+# ==============================================================================
+# TABS NAVIGASI (FOLDER KARTON)
+# ==============================================================================
+# PASTIKAN JUMLAH VARIABEL SAMA DENGAN JUMLAH JUDUL DI DALAM KURUNG SIKU
+tab1, tab2, tab3 = st.tabs([
+    "01 // CITATION GRAPH",
+    "02 // TOP-10 PAGERANK",
+    "03 // ADJACENCY MATRIX"
 ])
 
 
@@ -1057,16 +1060,7 @@ with tab2:
             'OUT-DEGREE': out_degs.get(url, 0)
         })
     df_top10 = pd.DataFrame(top10_rows)
-    
-    # Render tabel dengan tema Cardboard / Kraft Neobrutalism
-    st.markdown(
-        render_cardboard_table(
-            df_top10,
-            align_right_cols=['SKOR PAGERANK', 'IN-DEGREE', 'OUT-DEGREE'],
-            badge_col='RANK'
-        ),
-        unsafe_allow_html=True
-    )
+    st.dataframe(df_top10, use_container_width=True, hide_index=True)
     
     if len(ranking) > 0:
         st.markdown("#### GRAFIK DISTRIBUSI TOP-10 PAGERANK")
@@ -1095,16 +1089,19 @@ with tab2:
             
         ax.grid(axis='x', linestyle='--', color='#8c7a66', alpha=0.6)
         
-        max_val = max(plot_scores) if (plot_scores and max(plot_scores) > 0) else 1.0
         for bar in bars:
             w = bar.get_width()
-            ax.text(w + (max_val * 0.015), bar.get_y() + bar.get_height() / 2, f"{w:.4f}",
+            ax.text(w + (max(plot_scores) * 0.015), bar.get_y() + bar.get_height() / 2, f"{w:.4f}",
                     va='center', fontsize=8.5, fontweight='bold', family='monospace', color='#1f1a16')
                     
-        ax.set_xlim(0, max_val * 1.15)
+        ax.set_xlim(0, max(plot_scores) * 1.15)
         plt.tight_layout()
         st.pyplot(fig)
 
+
+# ==============================================================================
+# TAB 3: ADJACENCY MATRIX (MATRIKS KETETANGGAAN)
+# ==============================================================================
 with tab3:
     st.markdown("#### TABEL MATRIKS ADJACENCY (KONEKSI ANTAR SIMPUL)")
     st.write("Angka **1** menunjukkan adanya tautan (link) dari baris ke kolom, sedangkan **0** berarti tidak ada tautan.")
