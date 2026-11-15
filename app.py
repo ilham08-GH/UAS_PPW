@@ -684,26 +684,23 @@ class WebCrawler:
 
 
 # ==============================================================================
-# FUNGSI MEMBANGUN CITATION GRAPH BERGAYA KERTAS KARDUS (TENANG & STATIS)
+# FUNGSI MEMBANGUN CITATION GRAPH (DIPERBAIKI)
 # ==============================================================================
 def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url,
                                     color_mode="Klaster Komunitas (Connected Papers)",
                                     size_multiplier=1.0, spring_spacing=100,
                                     show_all_labels=False, freeze_physics=True):
-    """
-    Menghasilkan graf interaktif di atas kanvas kertas unbleached (#f4ece1)
-    dengan border hitam tegas ala potongan pin kardus dan penguncian statis anti-gerak.
-    """
     net = Network(height='720px', width='100%', directed=True,
                   bgcolor='#f4ece1', font_color='#1f1a16', cdn_resources='remote')
     
+    # 1. PERBAIKAN GRAVITASI & JARAK (Menyebar, tidak menumpuk)
     net.force_atlas_2based(
-        gravity=-50,
-        central_gravity=0.015,
-        spring_length=spring_spacing,
-        spring_strength=0.08,
-        damping=0.75,
-        overlap=0.20
+        gravity=-180,           # Diperkuat agar menyebar (sebelumnya -50)
+        central_gravity=0.01,
+        spring_length=150,      # Diperlebar agar tidak ruwet
+        spring_strength=0.05,
+        damping=0.8,
+        overlap=0.4
     )
 
     max_pr = max(pr_scores.values()) if pr_scores else 1
@@ -711,75 +708,75 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
     denom = (max_pr - min_pr) if (max_pr - min_pr) > 0 else 1
     
     node_communities = detect_communities(G)
-    top_nodes = [u for u, _ in ranking[:8]]
+    top_nodes = [u for u, _ in ranking[:5]] # Hanya top 5 yang diberi label
     top1_node = ranking[0][0] if ranking else seed_url
 
     for node in G.nodes():
         pr_val = pr_scores.get(node, 0)
         norm_val = (pr_val - min_pr) / denom
+        node_size = (12 + (norm_val ** 0.8) * 45) * size_multiplier
         
-        node_size = (14 + (norm_val ** 0.8) * 45) * size_multiplier
-        
-        title_full = page_titles.get(node, node)
-        name_short = get_page_name(node, page_titles, max_len=26)
+        # Ambil judul manusiawi yang pendek (bukan URL)
+        name_short = get_page_name(node, page_titles, max_len=28)
+        title_full = page_titles.get(node, name_short)
         
         rank_pos = [i + 1 for i, (u, _) in enumerate(ranking) if u == node]
-        rank_str = f"RANK #{rank_pos[0]}" if rank_pos else ""
+        rank_str = f"Peringkat: #{rank_pos[0]}" if rank_pos else ""
         comm_id = node_communities.get(node, 0)
 
-        is_top_or_seed = (node == top1_node or node == seed_url)
-        if is_top_or_seed:
+        # Penentuan Warna
+        if node == top1_node or node == seed_url:
             node_color = '#1f1a16'
             border_color = '#b85d38'
-            font_color = '#f4ece1'
         elif color_mode == "Klaster Komunitas (Connected Papers)":
             node_color = COMMUNITY_PALETTE[comm_id % len(COMMUNITY_PALETTE)]
             border_color = '#1f1a16'
-            font_color = '#1f1a16'
         else:
             r = int(214 - norm_val * 120)
             g = int(188 - norm_val * 115)
             b = int(151 - norm_val * 110)
             node_color = f'rgb({r}, {g}, {b})'
             border_color = '#1f1a16'
-            font_color = '#1f1a16'
 
-        if show_all_labels or node in top_nodes or is_top_or_seed:
+        # 2. HILANGKAN LABEL URL PANJANG DI BAWAH NODE
+        # Tampilkan teks pendek *hanya* jika dicentang "Tampilkan Semua", 
+        # atau jika node tersebut masuk Top-5 peringkat PageRank.
+        if show_all_labels or node in top_nodes or node == top1_node:
             node_label = name_short
         else:
-            node_label = ""
+            node_label = " " # Kosong, graf jauh lebih bersih
 
-        hover_html = (
-            f"<div style='font-family: Space Mono, monospace; background: #f4ece1; border: 2px solid #1f1a16; padding: 8px; font-size: 12px; color: #1f1a16;'>"
-            f"<b style='font-size: 13px;'>{title_full}</b><br>"
-            f"<span style='color: #5c4e43; font-size: 11px;'>{node}</span><br>"
-            f"<hr style='border: 0; border-top: 2px dashed #1f1a16; margin: 6px 0;'>"
-            f"<b>PAGERANK:</b> <span style='color: #b85d38; font-weight: bold;'>{pr_val:.6f}</span> ({rank_str})<br>"
-            f"<b>KLASTER:</b> #{comm_id + 1}<br>"
-            f"<b>IN-DEGREE:</b> {G.in_degree(node)} | <b>OUT-DEGREE:</b> {G.out_degree(node)}"
-            f"</div>"
+        # 3. PERBAIKAN TOOLTIP (Teks Biasa, bukan kode HTML)
+        # Gunakan teks murni dengan enter (\n) agar tooltips terbaca rapi
+        hover_text = (
+            f"JUDUL: {title_full}\n"
+            f"URL: {node}\n"
+            f"------------------------\n"
+            f"PAGERANK: {pr_val:.5f} ({rank_str})\n"
+            f"KLASTER: #{comm_id + 1}\n"
+            f"IN: {G.in_degree(node)} | OUT: {G.out_degree(node)}"
         )
 
         net.add_node(
             node,
             label=node_label,
-            title=hover_html,
+            title=hover_text, # <- Gunakan string teks biasa
             size=node_size,
             color={'background': node_color, 'border': border_color, 'highlight': {'background': '#b85d38', 'border': '#1f1a16'}},
             borderWidth=2.5,
             borderWidthSelected=4,
-            font={'size': 11, 'color': font_color, 'face': 'Space Mono, monospace', 'strokeWidth': 3, 'strokeColor': '#1f1a16' if is_top_or_seed else '#f4ece1'}
+            font={'size': 12, 'color': '#1f1a16', 'face': 'Space Mono, monospace', 'strokeWidth': 4, 'strokeColor': '#f4ece1'}
         )
 
     for source, target in G.edges():
-        is_highlight = target in top_nodes[:3]
+        is_highlight = target in top_nodes[:2]
         edge_color = '#6e5d4f' if is_highlight else '#b5a492'
         edge_width = 1.6 if is_highlight else 1.0
 
         net.add_edge(
             source, target,
             color={'color': edge_color, 'highlight': '#b85d38', 'hover': '#1f1a16'},
-            arrows={'to': {'enabled': True, 'scaleFactor': 0.55}},
+            arrows={'to': {'enabled': True, 'scaleFactor': 0.50}},
             width=edge_width,
             smooth={'type': 'continuous', 'roundness': 0.12}
         )
@@ -794,13 +791,10 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
         network.once("stabilizationIterationsDone", function() {
             network.setOptions({ physics: false });
         });
-        setTimeout(function() {
-            network.setOptions({ physics: false });
-        }, 1200);
         """
         html_out = html_out.replace("return network;", f"{freeze_script}\n        return network;")
 
-    return html_out
+    return html_out    return html_out
 
 
 # ==============================================================================
