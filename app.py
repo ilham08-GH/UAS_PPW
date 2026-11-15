@@ -993,19 +993,14 @@ tab1, tab2, tab3 = st.tabs([
 # TAB 1: CITATION GRAPH
 # ==============================================================================
 with tab1:
-    col_t1, col_t2, col_t3, col_t4 = st.columns([3, 2, 2, 3])
-    with col_t1:
+    col_t1= st.columns([3, 2, 2, 3])
+    with col_t1, col_t2:
         color_choice = st.selectbox(
             "SKEMA WARNA SIMPUL:",
             ["Klaster Komunitas (Connected Papers)", "Gradasi Skor PageRank"]
         )
     with col_t2:
-        size_scale = st.slider("SKALA SIMPUL:", 0.5, 2.0, 1.0, 0.1)
-    with col_t3:
-        spacing_scale = st.slider("JARAK KLASTER:", 60, 200, 100, 10)
-    with col_t4:
         st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-        freeze_toggle = st.checkbox("KUNCI POSISI GRAF (STATIS)", value=True)
         show_all_lbl = st.checkbox("TAMPILKAN SEMUA JUDUL", value=False)
 
     html_graph = generate_connected_papers_graph(
