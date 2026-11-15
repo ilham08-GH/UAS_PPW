@@ -1046,7 +1046,56 @@ with tab2:
             'OUT-DEGREE': out_degs.get(url, 0)
         })
     df_top10 = pd.DataFrame(top10_rows)
-    st.dataframe(df_top10, use_container_width=True, hide_index=True)
+    
+    # --- CUSTOM STYLING TABEL KARDUS ---
+    # Konversi DataFrame ke HTML tanpa index
+    html_top10 = df_top10.to_html(index=False, classes="cardboard-table", border=0)
+    
+    # Highlight elemen RANK (#01, #02, dst) dengan warna terakota
+    html_top10 = html_top10.replace('<td>#', '<td style="color: #b85d38; font-weight: 900;">#')
+    
+    # Pastikan rata kiri tanpa indentasi agar tidak menjadi Code Block Markdown
+    custom_html_top10 = f"""
+<style>
+.table-container {{
+    overflow-x: auto;
+    background-color: #f4ece1;
+    border: 3px solid #1f1a16;
+    box-shadow: 7px 7px 0px #1f1a16;
+    margin-top: 15px;
+    margin-bottom: 25px;
+}}
+.cardboard-table {{
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: #1f1a16;
+}}
+.cardboard-table th {{
+    background-color: #d6bc97;
+    border: 2px solid #1f1a16;
+    padding: 10px 14px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+}}
+.cardboard-table td {{
+    border: 2px solid #1f1a16;
+    padding: 10px;
+    text-align: center;
+    font-weight: 700;
+}}
+.cardboard-table tbody tr:hover td, .cardboard-table tbody tr:hover th {{
+    background-color: #e6dac8;
+}}
+</style>
+<div class="table-container">
+{html_top10}
+</div>
+"""
+    
+    st.markdown(custom_html_top10, unsafe_allow_html=True)
     
     if len(ranking) > 0:
         st.markdown("#### GRAFIK DISTRIBUSI TOP-10 PAGERANK")
