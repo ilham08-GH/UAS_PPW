@@ -556,9 +556,13 @@ def get_page_name(url, page_titles=None, max_len=30):
 # ==============================================================================
 # KELAS WEB CRAWLER ROBUST (SESSION, RETRY, TIMEOUT PANJANG & FILTER 404)
 # ==============================================================================
+# ==============================================================================
+# KELAS WEB CRAWLER ROBUST (DENGAN BATASAN KEDALAMAN / DEPTH)
+# ==============================================================================
 class WebCrawler:
-    def __init__(self, seed_url, max_pages=30, delay=0.4, timeout=16, allowed_domains=None):
+    def __init__(self, seed_url, max_depth=2, max_pages=30, delay=0.4, timeout=16, allowed_domains=None):
         self.seed_url = seed_url
+        self.max_depth = max_depth  # <-- Parameter Kedalaman Baru
         self.max_pages = max_pages
         self.delay = delay
         self.timeout = timeout
@@ -576,8 +580,8 @@ class WebCrawler:
         self.session.mount('http://', HTTPAdapter(max_retries=retries))
         
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'id,en-US;q=0.9,en;q=0.8',
         }
         
@@ -589,27 +593,17 @@ class WebCrawler:
     def _is_valid_url(self, url):
         try:
             parsed = urlparse(url)
-            if parsed.scheme not in ('http', 'https'):
-                return False
-            if not any(d in parsed.netloc for d in self.allowed_domains):
-                return False
-            skip_ext = (
-                '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar', 
-                '.docx', '.xlsx', '.pptx', '.css', '.js', '.svg', '.mp4', 
-                '.mp3', '.ico', '.xml', '.rss', '.json', '.webp', '.woff', '.woff2',
-                '.exe', '.dmg', '.tar', '.gz'
-            )
-            if parsed.path.lower().endswith(skip_ext):
-                return False
-            path_lower = parsed.path.lower()
-            if any(bad in path_lower for bad in ['/wp-includes/', '/feed/', '/feed', '/trackback/']):
-                return False
+            if parsed.scheme not in ('http', 'https'): return False
+            if not any(d in parsed.netloc for d in self.allowed_domains): return False
+            skip_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar', 
+                        '.docx', '.xlsx', '.pptx', '.css', '.js', '.svg', '.mp4')
+            if parsed.path.lower().endswith(skip_ext): return False
+            if any(bad in parsed.path.lower() for bad in ['/wp-includes/', '/feed/', '/trackback/']): return False
             return True
         except:
             return False
 
     def _fetch(self, url):
-        """Mengambil halaman dengan toleransi SSL dan fallback HTTP jika HTTPS bermasalah."""
         try:
             return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=True)
         except requests.exceptions.SSLError:
@@ -617,25 +611,25 @@ class WebCrawler:
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
             if url.startswith('https://'):
                 http_url = 'http://' + url[8:]
-                try:
-                    return self.session.get(http_url, headers=self.headers, timeout=self.timeout, allow_redirects=True)
-                except:
-                    pass
+                try: return self.session.get(http_url, headers=self.headers, timeout=self.timeout, allow_redirects=True)
+                except: pass
             raise e
 
     def crawl(self, progress_callback=None):
-        queue = deque([self._normalize_url(self.seed_url)])
+        # Antrean sekarang menyimpan Tuple: (URL, Kedalaman_Saat_Ini)
+        queue = deque([(self._normalize_url(self.seed_url), 0)])
+        
         while queue and len(self.visited) < self.max_pages:
-            current_url = queue.popleft()
+            current_url, current_depth = queue.popleft()
+            
             if current_url in self.visited:
                 continue
+            
             try:
                 response = self._fetch(current_url)
-                
                 if response.status_code != 200:
                     self.failed_urls.append((current_url, f"HTTP {response.status_code}"))
                     continue
-                    
                 if 'text/html' not in response.headers.get('Content-Type', ''):
                     continue
                 
@@ -643,43 +637,35 @@ class WebCrawler:
                 title_tag = soup.find('title')
                 title = title_tag.get_text(strip=True) if title_tag else current_url
                 
-                title_lower = title.lower()
-                error_signatures = [
-                    'page not found', '404 not found', 'halaman tidak ditemukan', 
-                    'error 404', 'not found', '404 error', 'laman tidak ditemukan', 
-                    'tidak ditemukan', 'access denied', '403 forbidden'
-                ]
-                if any(sig in title_lower for sig in error_signatures):
-                    self.failed_urls.append((current_url, f"Soft-404: {title}"))
+                error_signatures = ['page not found', '404 not found', 'error 404', 'access denied']
+                if any(sig in title.lower() for sig in error_signatures):
                     continue
 
                 self.visited.add(current_url)
                 self.page_titles[current_url] = title
                 
-                found_links = set()
-                for a_tag in soup.find_all('a', href=True):
-                    full_url = urljoin(current_url, a_tag['href'].strip())
-                    norm = self._normalize_url(full_url)
-                    if self._is_valid_url(norm) and norm != current_url:
-                        found_links.add(norm)
-                        
-                for target in found_links:
-                    self.edges.append((current_url, target))
-                    if target not in self.visited:
-                        queue.append(target)
+                # PENTING: Hanya cari link baru JIKA kedalaman belum mencapai batas maksimal (Max Depth)
+                if current_depth < self.max_depth:
+                    found_links = set()
+                    for a_tag in soup.find_all('a', href=True):
+                        full_url = urljoin(current_url, a_tag['href'].strip())
+                        norm = self._normalize_url(full_url)
+                        if self._is_valid_url(norm) and norm != current_url:
+                            found_links.add(norm)
+                            
+                    for target in found_links:
+                        self.edges.append((current_url, target))
+                        if target not in self.visited:
+                            # Masukkan link target ke antrean dengan kedalaman + 1
+                            queue.append((target, current_depth + 1))
                         
                 if progress_callback:
                     progress_callback(len(self.visited), self.max_pages, current_url, title)
                 time.sleep(self.delay)
+                
             except Exception as e:
-                err_msg = str(e)
-                if "Read timed out" in err_msg or "ConnectTimeout" in err_msg:
-                    err_clean = "Waktu koneksi habis (Timeout)"
-                elif "SSLError" in err_msg:
-                    err_clean = "Masalah Sertifikat SSL"
-                else:
-                    err_clean = err_msg[:60]
-                self.failed_urls.append((current_url, err_clean))
+                self.failed_urls.append((current_url, str(e)[:40]))
+                
         return self.visited, self.edges, self.page_titles
 
 
@@ -811,20 +797,22 @@ st.markdown("""
 # PANEL PENGATURAN & FORM CRAWLING
 # ==============================================================================
 with st.container():
-    # Langsung jadikan input tanpa kolom agar tampil penuh dan rapi
     seed_url_input = st.text_input(
         "SEED URL TARGET (HALAMAN AWAL):",
         value="",
-        placeholder="Masukkan URL (contoh: https://uinsa.ac.id)"
+        placeholder="Masukkan URL (Contoh: https://uinsa.ac.id)"
     )
 
-    col_p1, col_p2, col_p3 = st.columns([1, 1, 1])
+    # Membagi menjadi 4 kolom agar Slider Kedalaman bisa masuk
+    col_p1, col_p2, col_p3, col_p4 = st.columns([1, 1, 1, 1])
     with col_p1:
-        max_pages_input = st.slider("MAKS HALAMAN:", min_value=5, max_value=80, value=25, step=5)
+        max_depth_input = st.slider("KEDALAMAN (DEPTH):", min_value=1, max_value=5, value=2, step=1)
     with col_p2:
-        delay_input = st.slider("JEDA REQUEST (DETIK):", min_value=0.1, max_value=2.0, value=0.4, step=0.1)
+        max_pages_input = st.slider("MAKS HALAMAN:", min_value=5, max_value=100, value=25, step=5)
     with col_p3:
-        damping_factor = st.slider("DAMPING FACTOR (d):", min_value=0.10, max_value=0.99, value=0.85, step=0.05)
+        delay_input = st.slider("JEDA (DETIK):", min_value=0.1, max_value=2.0, value=0.4, step=0.1)
+    with col_p4:
+        damping_factor = st.slider("DAMPING (d):", min_value=0.10, max_value=0.99, value=0.85, step=0.05)
 
     crawl_btn = st.button("MULAI CRAWLING & BANGUN GRAF", type="primary", use_container_width=True)
 
@@ -845,12 +833,11 @@ if crawl_btn:
         
         parsed_seed = urlparse(raw_seed)
         seed_domain = parsed_seed.netloc.replace('www.', '')
-        
-        # Karena input batasan domain dihapus, kita set otomatis filter hanya ke domain utama
         allowed_domains = [seed_domain]
             
         crawler = WebCrawler(
             seed_url=raw_seed,
+            max_depth=max_depth_input,   # <-- Parameter Kedalaman dioper ke mesin
             max_pages=max_pages_input,
             delay=delay_input,
             timeout=16,
@@ -865,15 +852,14 @@ if crawl_btn:
             progress_bar.progress(pct)
             status_text.caption(f"[{current}/{total}] LOG: {title[:40]} ({url[:45]}...)")
             
-        with st.spinner(f"Memindai jaringan hyperlink pada {raw_seed}..."):
+        with st.spinner(f"Memindai jaringan hyperlink pada {raw_seed} hingga kedalaman {max_depth_input}..."):
             visited, edges, titles = crawler.crawl(progress_callback=on_progress)
             
         progress_bar.empty()
         status_text.empty()
         
         if len(visited) == 0:
-            err_reason = crawler.failed_urls[0][1] if crawler.failed_urls else "Server tidak merespons dalam batas waktu."
-            st.error(f"GAGAL MENGAMBIL DATA DARI {raw_seed}.\n\nPENYEBAB: `{err_reason}`\n\nPastikan URL aktif atau coba tanpa awalan `www.`")
+            st.error(f"GAGAL MENGAMBIL DATA DARI {raw_seed}. Pastikan URL aktif.")
         else:
             G_crawled = nx.DiGraph()
             G_crawled.add_nodes_from(visited)
