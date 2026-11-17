@@ -250,27 +250,28 @@ def get_page_name(url, page_titles=None, max_len=30):
 # KELAS WEB CRAWLER (BEBAS KELUAR DOMAIN UNTUK MENCARI AFILIASI)
 # ==============================================================================
 class WebCrawler:
-    # Tambahkan parameter max_per_domain di sini
-    def __init__(self, seed_url, max_depth=2, max_pages=30, max_per_domain=5, delay=0.4, timeout=12):
+    def __init__(self, seed_url, max_pages=30, delay=0.4, timeout=16, allowed_domains=None):
         self.seed_url = seed_url
-        self.max_depth = max_depth
         self.max_pages = max_pages
-        self.max_per_domain = max_per_domain  # <-- Batas maksimal per domain
         self.delay = delay
         self.timeout = timeout
+        parsed = urlparse(seed_url)
+        self.seed_domain = parsed.netloc.replace('www.', '')
+        self.allowed_domains = allowed_domains or [self.seed_domain]
         self.visited = set()
         self.edges = []
         self.page_titles = {}
         self.failed_urls = []
-        self.domain_counts = {}  # <-- Kamus pencatat jatah per domain
         
         self.session = requests.Session()
-        retries = Retry(total=1, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
+        retries = Retry(total=2, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
         self.session.mount('https://', HTTPAdapter(max_retries=retries))
         self.session.mount('http://', HTTPAdapter(max_retries=retries))
+        
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'id,en-US;q=0.9,en;q=0.8',
         }
         
     def _normalize_url(self, url):
@@ -281,72 +282,99 @@ class WebCrawler:
     def _is_valid_url(self, url):
         try:
             parsed = urlparse(url)
-            if parsed.scheme not in ('http', 'https'): return False
-            skip_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar', 
-                        '.docx', '.xlsx', '.pptx', '.css', '.js', '.svg', '.mp4')
-            if parsed.path.lower().endswith(skip_ext): return False
-            if any(bad in parsed.path.lower() for bad in ['/wp-includes/', '/feed/', '/trackback/']): return False
+            if parsed.scheme not in ('http', 'https'):
+                return False
+            if not any(d in parsed.netloc for d in self.allowed_domains):
+                return False
+            skip_ext = (
+                '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar', 
+                '.docx', '.xlsx', '.pptx', '.css', '.js', '.svg', '.mp4', 
+                '.mp3', '.ico', '.xml', '.rss', '.json', '.webp', '.woff', '.woff2',
+                '.exe', '.dmg', '.tar', '.gz'
+            )
+            if parsed.path.lower().endswith(skip_ext):
+                return False
+            path_lower = parsed.path.lower()
+            if any(bad in path_lower for bad in ['/wp-includes/', '/feed/', '/feed', '/trackback/']):
+                return False
             return True
         except:
             return False
 
     def _fetch(self, url):
+        """Mengambil halaman dengan toleransi SSL dan fallback HTTP jika HTTPS bermasalah."""
         try:
             return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=True)
         except requests.exceptions.SSLError:
             return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=False)
-        except Exception as e:
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            if url.startswith('https://'):
+                http_url = 'http://' + url[8:]
+                try:
+                    return self.session.get(http_url, headers=self.headers, timeout=self.timeout, allow_redirects=True)
+                except:
+                    pass
             raise e
 
     def crawl(self, progress_callback=None):
-        queue = deque([(self._normalize_url(self.seed_url), 0)])
-        
+        queue = deque([self._normalize_url(self.seed_url)])
         while queue and len(self.visited) < self.max_pages:
-            current_url, current_depth = queue.popleft()
-            
-            if current_url in self.visited: continue
-            
-            # --- FITUR BARU: CEK JATAH DOMAIN ---
-            current_domain = urlparse(current_url).netloc.replace('www.', '')
-            # Jika domain ini sudah mencapai batas maksimal, lewati (skip)
-            if self.domain_counts.get(current_domain, 0) >= self.max_per_domain:
+            current_url = queue.popleft()
+            if current_url in self.visited:
                 continue
-            
             try:
                 response = self._fetch(current_url)
-                if response.status_code != 200 or 'text/html' not in response.headers.get('Content-Type', ''):
+                
+                if response.status_code != 200:
+                    self.failed_urls.append((current_url, f"HTTP {response.status_code}"))
+                    continue
+                    
+                if 'text/html' not in response.headers.get('Content-Type', ''):
                     continue
                 
                 soup = BeautifulSoup(response.text, 'html.parser')
                 title_tag = soup.find('title')
                 title = title_tag.get_text(strip=True) if title_tag else current_url
-                if any(sig in title.lower() for sig in ['page not found', '404', 'error']): continue
+                
+                title_lower = title.lower()
+                error_signatures = [
+                    'page not found', '404 not found', 'halaman tidak ditemukan', 
+                    'error 404', 'not found', '404 error', 'laman tidak ditemukan', 
+                    'tidak ditemukan', 'access denied', '403 forbidden'
+                ]
+                if any(sig in title_lower for sig in error_signatures):
+                    self.failed_urls.append((current_url, f"Soft-404: {title}"))
+                    continue
 
-                # Catat kunjungan dan tambah penghitung domain
                 self.visited.add(current_url)
-                self.domain_counts[current_domain] = self.domain_counts.get(current_domain, 0) + 1
                 self.page_titles[current_url] = title
                 
-                if current_depth < self.max_depth:
-                    found_links = set()
-                    for a_tag in soup.find_all('a', href=True):
-                        full_url = urljoin(current_url, a_tag['href'].strip())
-                        norm = self._normalize_url(full_url)
-                        if self._is_valid_url(norm) and norm != current_url:
-                            found_links.add(norm)
-                            
-                    for target in found_links:
-                        self.edges.append((current_url, target))
-                        if target not in self.visited:
-                            queue.append((target, current_depth + 1))
+                found_links = set()
+                for a_tag in soup.find_all('a', href=True):
+                    full_url = urljoin(current_url, a_tag['href'].strip())
+                    norm = self._normalize_url(full_url)
+                    if self._is_valid_url(norm) and norm != current_url:
+                        found_links.add(norm)
+                        
+                for target in found_links:
+                    self.edges.append((current_url, target))
+                    if target not in self.visited:
+                        queue.append(target)
                         
                 if progress_callback:
                     progress_callback(len(self.visited), self.max_pages, current_url, title)
                 time.sleep(self.delay)
             except Exception as e:
-                self.failed_urls.append((current_url, str(e)[:40]))
-                
+                err_msg = str(e)
+                if "Read timed out" in err_msg or "ConnectTimeout" in err_msg:
+                    err_clean = "Waktu koneksi habis (Timeout)"
+                elif "SSLError" in err_msg:
+                    err_clean = "Masalah Sertifikat SSL"
+                else:
+                    err_clean = err_msg[:60]
+                self.failed_urls.append((current_url, err_clean))
         return self.visited, self.edges, self.page_titles
+
 
 
 # ==============================================================================
