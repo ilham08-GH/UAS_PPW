@@ -250,22 +250,24 @@ def get_page_name(url, page_titles=None, max_len=30):
 # KELAS WEB CRAWLER (BEBAS KELUAR DOMAIN UNTUK MENCARI AFILIASI)
 # ==============================================================================
 class WebCrawler:
-    def __init__(self, seed_url, max_depth=2, max_pages=30, delay=0.4, timeout=12):
+    # Tambahkan parameter max_per_domain di sini
+    def __init__(self, seed_url, max_depth=2, max_pages=30, max_per_domain=5, delay=0.4, timeout=12):
         self.seed_url = seed_url
         self.max_depth = max_depth
         self.max_pages = max_pages
+        self.max_per_domain = max_per_domain  # <-- Batas maksimal per domain
         self.delay = delay
         self.timeout = timeout
         self.visited = set()
         self.edges = []
         self.page_titles = {}
         self.failed_urls = []
+        self.domain_counts = {}  # <-- Kamus pencatat jatah per domain
         
         self.session = requests.Session()
         retries = Retry(total=1, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
         self.session.mount('https://', HTTPAdapter(max_retries=retries))
         self.session.mount('http://', HTTPAdapter(max_retries=retries))
-        
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -280,10 +282,6 @@ class WebCrawler:
         try:
             parsed = urlparse(url)
             if parsed.scheme not in ('http', 'https'): return False
-            
-            # FITUR BARU: Kita tidak lagi membatasi ke allowed_domains
-            # Sehingga crawler bisa melacak afiliasi ke Kemdikbud, Jurnal Eksternal, dll
-            
             skip_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar', 
                         '.docx', '.xlsx', '.pptx', '.css', '.js', '.svg', '.mp4')
             if parsed.path.lower().endswith(skip_ext): return False
@@ -308,6 +306,12 @@ class WebCrawler:
             
             if current_url in self.visited: continue
             
+            # --- FITUR BARU: CEK JATAH DOMAIN ---
+            current_domain = urlparse(current_url).netloc.replace('www.', '')
+            # Jika domain ini sudah mencapai batas maksimal, lewati (skip)
+            if self.domain_counts.get(current_domain, 0) >= self.max_per_domain:
+                continue
+            
             try:
                 response = self._fetch(current_url)
                 if response.status_code != 200 or 'text/html' not in response.headers.get('Content-Type', ''):
@@ -316,13 +320,13 @@ class WebCrawler:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 title_tag = soup.find('title')
                 title = title_tag.get_text(strip=True) if title_tag else current_url
-                
                 if any(sig in title.lower() for sig in ['page not found', '404', 'error']): continue
 
+                # Catat kunjungan dan tambah penghitung domain
                 self.visited.add(current_url)
+                self.domain_counts[current_domain] = self.domain_counts.get(current_domain, 0) + 1
                 self.page_titles[current_url] = title
                 
-                # Hanya cari link jika kedalaman saat ini belum melebihi batas Max Depth
                 if current_depth < self.max_depth:
                     found_links = set()
                     for a_tag in soup.find_all('a', href=True):
