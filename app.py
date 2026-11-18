@@ -283,7 +283,7 @@ with st.container():
     # Kembali ke 4 kolom (slider domain dihapus)
     col_p1, col_p2, col_p3, col_p4 = st.columns(4)
     with col_p1: max_depth_input = st.slider("KEDALAMAN:", 1, 4, 2)
-    with col_p2: max_pages_input = st.slider("MAKS HALAMAN:", 10, 200, 60, 10)
+    with col_p2: max_pages_input = st.slider("MAKS NODE:", 10, 200, 60, 10)
     with col_p3: delay_input = st.slider("JEDA (DETIK):", 0.1, 2.0, 0.4)
     with col_p4: damping_factor = st.slider("DAMPING (d):", 0.10, 0.99, 0.85)
 
