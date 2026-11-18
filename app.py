@@ -300,12 +300,32 @@ if crawl_btn:
     if not raw_seed: st.warning("Masukkan URL target!")
     else:
         if not raw_seed.startswith(('http://', 'https://')): raw_seed = 'https://' + raw_seed
-        
-        # max_per_domain sudah dihapus di sini
         crawler = WebCrawler(seed_url=raw_seed, max_depth=max_depth_input, max_pages=max_pages_input, delay=delay_input)
         
         progress_bar = st.progress(0)
+        status_text = st.empty()
+        def on_progress(current, total, url, title):
+            progress_bar.progress(min(1.0, current / total))
+            status_text.caption(f"[{current}/{total}] MERAYAPI: {url[:60]}...")
+            
+        with st.spinner(f"Memetakan jaringan hyperlink..."):
+            visited, edges, titles = crawler.crawl(progress_callback=on_progress)
+            
+        progress_bar.empty()
+        status_text.empty()
+        
+        if len(visited) == 0: st.error("GAGAL MENGAMBIL DATA.")
+        else:
+            G_crawled = nx.DiGraph()
+            G_crawled.add_nodes_from(visited)
+            G_crawled.add_edges_from([(u, v) for u, v in edges if u in visited and v in visited])
+            G_crawled.remove_edges_from(nx.selfloop_edges(G_crawled))
+            st.session_state.graph_data = {'G': G_crawled, 'titles': titles, 'seed': raw_seed}
 
+# KODE DI BAWAH INI HARUS RATA KIRI (TIDAK BOLEH MENJOROK / DI DALAM IF)
+if st.session_state.graph_data is None:
+    st.markdown("<div class='empty-box'><div style='font-size: 1.5rem; font-weight: 700; margin-bottom: 10px;'>[ DATA KOSONG ]</div><p>Masukkan Seed URL dan mulai Crawling.</p></div>", unsafe_allow_html=True)
+    st.stop()
 
 # ==============================================================================
 # PEMROSESAN METRIK
