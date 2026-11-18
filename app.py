@@ -145,21 +145,19 @@ def get_page_name(url, page_titles=None, max_len=30):
 
 
 # ==============================================================================
-# KELAS WEB CRAWLER (DENGAN DEPTH & MAX PER DOMAIN)
+# KELAS WEB CRAWLER (TANPA MAX PER DOMAIN)
 # ==============================================================================
 class WebCrawler:
-    def __init__(self, seed_url, max_depth=2, max_pages=30, max_per_domain=5, delay=0.4, timeout=16):
+    def __init__(self, seed_url, max_depth=2, max_pages=30, delay=0.4, timeout=16):
         self.seed_url = seed_url
         self.max_depth = max_depth
         self.max_pages = max_pages
-        self.max_per_domain = max_per_domain
         self.delay = delay
         self.timeout = timeout
         self.visited = set()
         self.edges = []
         self.page_titles = {}
         self.failed_urls = []
-        self.domain_counts = {}
         
         self.session = requests.Session()
         retries = Retry(total=1, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
@@ -179,7 +177,6 @@ class WebCrawler:
         try:
             parsed = urlparse(url)
             if parsed.scheme not in ('http', 'https'): return False
-            # FITUR: allowed_domains dihilangkan agar crawler bisa melompat ke web luar
             skip_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar', '.docx', '.xlsx', '.pptx', '.css', '.js', '.svg', '.mp4')
             if parsed.path.lower().endswith(skip_ext): return False
             if any(bad in parsed.path.lower() for bad in ['/wp-includes/', '/feed/', '/trackback/']): return False
@@ -198,11 +195,6 @@ class WebCrawler:
             current_url, current_depth = queue.popleft()
             if current_url in self.visited: continue
             
-            # FITUR: Batas Jatah Domain
-            current_domain = urlparse(current_url).netloc.replace('www.', '')
-            if self.domain_counts.get(current_domain, 0) >= self.max_per_domain:
-                continue
-            
             try:
                 response = self._fetch(current_url)
                 if response.status_code != 200 or 'text/html' not in response.headers.get('Content-Type', ''): continue
@@ -213,7 +205,6 @@ class WebCrawler:
                 if any(sig in title.lower() for sig in ['page not found', '404', 'error']): continue
 
                 self.visited.add(current_url)
-                self.domain_counts[current_domain] = self.domain_counts.get(current_domain, 0) + 1
                 self.page_titles[current_url] = title
                 
                 if current_depth < self.max_depth:
@@ -234,8 +225,7 @@ class WebCrawler:
             except Exception as e:
                 self.failed_urls.append((current_url, str(e)[:40]))
         return self.visited, self.edges, self.page_titles
-
-
+        
 # ==============================================================================
 # FUNGSI MEMBANGUN CITATION GRAPH
 # ==============================================================================
@@ -283,18 +273,19 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
 
 
 # ==============================================================================
-# HEADER UTAMA & PANEL FORM (DENGAN 5 KOLOM)
+# HEADER UTAMA & PANEL FORM
 # ==============================================================================
 st.markdown("<div class='cardboard-header' style='text-align: center;'><div class='main-title'>[ NodeCraft ]</div></div>", unsafe_allow_html=True)
 
 with st.container():
     seed_url_input = st.text_input("SEED URL TARGET (HALAMAN AWAL):", value="", placeholder="Contoh: https://trunojoyo.ac.id")
-    col_p1, col_p2, col_p3, col_p4, col_p5 = st.columns(5)
+    
+    # Kembali ke 4 kolom (slider domain dihapus)
+    col_p1, col_p2, col_p3, col_p4 = st.columns(4)
     with col_p1: max_depth_input = st.slider("KEDALAMAN:", 1, 4, 2)
     with col_p2: max_pages_input = st.slider("MAKS HALAMAN:", 10, 200, 60, 10)
-    with col_p3: max_domain_input = st.slider("MAKS/DOMAIN:", 1, 50, 10, 1)
-    with col_p4: delay_input = st.slider("JEDA (DETIK):", 0.1, 2.0, 0.4)
-    with col_p5: damping_factor = st.slider("DAMPING (d):", 0.10, 0.99, 0.85)
+    with col_p3: delay_input = st.slider("JEDA (DETIK):", 0.1, 2.0, 0.4)
+    with col_p4: damping_factor = st.slider("DAMPING (d):", 0.10, 0.99, 0.85)
 
     crawl_btn = st.button("MULAI CRAWLING & BANGUN GRAF", type="primary", use_container_width=True)
 
@@ -309,31 +300,11 @@ if crawl_btn:
     if not raw_seed: st.warning("Masukkan URL target!")
     else:
         if not raw_seed.startswith(('http://', 'https://')): raw_seed = 'https://' + raw_seed
-        crawler = WebCrawler(seed_url=raw_seed, max_depth=max_depth_input, max_pages=max_pages_input, max_per_domain=max_domain_input, delay=delay_input)
+        
+        # max_per_domain sudah dihapus di sini
+        crawler = WebCrawler(seed_url=raw_seed, max_depth=max_depth_input, max_pages=max_pages_input, delay=delay_input)
         
         progress_bar = st.progress(0)
-        status_text = st.empty()
-        def on_progress(current, total, url, title):
-            progress_bar.progress(min(1.0, current / total))
-            status_text.caption(f"[{current}/{total}] MERAYAPI: {url[:60]}...")
-            
-        with st.spinner(f"Memetakan jaringan hyperlink..."):
-            visited, edges, titles = crawler.crawl(progress_callback=on_progress)
-            
-        progress_bar.empty()
-        status_text.empty()
-        
-        if len(visited) == 0: st.error("GAGAL MENGAMBIL DATA.")
-        else:
-            G_crawled = nx.DiGraph()
-            G_crawled.add_nodes_from(visited)
-            G_crawled.add_edges_from([(u, v) for u, v in edges if u in visited and v in visited])
-            G_crawled.remove_edges_from(nx.selfloop_edges(G_crawled))
-            st.session_state.graph_data = {'G': G_crawled, 'titles': titles, 'seed': raw_seed}
-
-if st.session_state.graph_data is None:
-    st.markdown("<div class='empty-box'><div style='font-size: 1.5rem; font-weight: 700; margin-bottom: 10px;'>[ DATA KOSONG ]</div><p>Masukkan Seed URL dan mulai Crawling.</p></div>", unsafe_allow_html=True)
-    st.stop()
 
 
 # ==============================================================================
