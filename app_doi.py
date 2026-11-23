@@ -3,8 +3,6 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import urllib3
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
 from collections import deque
 import time
 import html as html_lib
@@ -19,14 +17,14 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ==============================================================================
 # KONFIGURASI HALAMAN STREAMLIT
 # ==============================================================================
-st.set_page_config(page_title="NODECRAFT // AURORA", page_icon="🌌", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NODECRAFT // AURORA PASTEL", page_icon="✨", layout="wide", initial_sidebar_state="collapsed")
 
 # ==============================================================================
-# CUSTOM STYLING: AURORA GRADIENT & GLASSMORPHISM
+# CUSTOM STYLING: SOFT AURORA GRADIENT & FROSTED GLASS
 # ==============================================================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap');
 
     [data-testid="stSidebar"], [data-testid="stSidebarNav"], [data-testid="collapsedControl"], header[data-testid="stHeader"] {
         display: none !important;
@@ -34,11 +32,11 @@ st.markdown("""
 
     .stApp {
         background:
-            radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.24), transparent 42%),
-            radial-gradient(circle at 85% 15%, rgba(168, 85, 247, 0.26), transparent 45%),
-            radial-gradient(circle at 55% 82%, rgba(52, 211, 153, 0.20), transparent 48%),
-            linear-gradient(135deg, #070b19 0%, #0d132b 48%, #091726 100%);
-        color: #f1f5f9;
+            radial-gradient(circle at 12% 14%, rgba(196, 181, 253, 0.54), transparent 44%),
+            radial-gradient(circle at 86% 18%, rgba(165, 243, 252, 0.56), transparent 46%),
+            radial-gradient(circle at 68% 82%, rgba(167, 243, 208, 0.50), transparent 48%),
+            linear-gradient(145deg, #f4f1ff 0%, #eef6ff 48%, #ecfdf5 100%);
+        color: #1e2235;
         font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
@@ -49,12 +47,12 @@ st.markdown("""
     }
 
     .aurora-header {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.72), rgba(30, 27, 75, 0.65));
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
-        border: 1px solid rgba(148, 163, 184, 0.22);
-        border-radius: 20px;
-        box-shadow: 0 18px 45px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        background: linear-gradient(125deg, rgba(255, 255, 255, 0.80), rgba(243, 238, 255, 0.72), rgba(236, 253, 245, 0.76));
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1.5px solid rgba(255, 255, 255, 0.92);
+        border-radius: 24px;
+        box-shadow: 0 16px 38px rgba(99, 102, 241, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.96);
         padding: 28px 32px;
         margin-bottom: 24px;
         position: relative;
@@ -64,24 +62,24 @@ st.markdown("""
     .aurora-header::before {
         content: "UAS PPW // DOI CITATION";
         position: absolute;
-        top: 16px;
-        right: 22px;
-        background: linear-gradient(90deg, rgba(56, 189, 248, 0.22), rgba(168, 85, 247, 0.25));
-        color: #a5f3fc;
+        top: 18px;
+        right: 24px;
+        background: linear-gradient(90deg, rgba(124, 58, 237, 0.12), rgba(13, 148, 136, 0.14));
+        color: #4f46e5;
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.72rem;
         font-weight: 700;
-        letter-spacing: 1.2px;
-        padding: 5px 12px;
+        letter-spacing: 1px;
+        padding: 5px 13px;
         border-radius: 999px;
-        border: 1px solid rgba(103, 232, 249, 0.35);
+        border: 1px solid rgba(129, 140, 248, 0.35);
     }
 
     .main-title {
         font-family: 'Plus Jakarta Sans', sans-serif;
-        font-size: 2.25rem;
+        font-size: 2.2rem;
         font-weight: 800;
-        background: linear-gradient(90deg, #67e8f9 0%, #a78bfa 50%, #34d399 100%);
+        background: linear-gradient(90deg, #4f46e5 0%, #0284c7 48%, #0d9488 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         letter-spacing: -0.5px;
@@ -90,34 +88,34 @@ st.markdown("""
     }
 
     .sub-title {
-        color: #94a3b8;
-        font-size: 0.92rem;
+        color: #525b75;
+        font-size: 0.93rem;
         font-weight: 500;
     }
 
     .metric-card {
-        background: rgba(15, 23, 42, 0.62);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 16px;
-        box-shadow: 0 10px 28px rgba(2, 6, 23, 0.45);
+        background: rgba(255, 255, 255, 0.78);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1.5px solid rgba(255, 255, 255, 0.92);
+        border-radius: 20px;
+        box-shadow: 0 10px 26px rgba(99, 102, 241, 0.09);
         padding: 18px 16px;
         text-align: left;
         position: relative;
-        transition: transform 0.2s ease, border-color 0.2s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .metric-card:hover {
         transform: translateY(-3px);
-        border-color: rgba(103, 232, 249, 0.5);
+        box-shadow: 0 14px 32px rgba(14, 165, 233, 0.16);
     }
 
     .metric-val {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 1.65rem;
-        font-weight: 700;
-        background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399);
+        font-size: 1.7rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, #4f46e5 0%, #0284c7 52%, #0d9488 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         line-height: 1.2;
@@ -125,11 +123,11 @@ st.markdown("""
 
     .metric-lbl {
         font-family: 'Plus Jakarta Sans', sans-serif;
-        font-size: 0.76rem;
-        color: #cbd5e1;
-        font-weight: 600;
+        font-size: 0.75rem;
+        color: #525b75;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
+        letter-spacing: 0.5px;
         margin-top: 6px;
         white-space: nowrap;
         overflow: hidden;
@@ -137,71 +135,72 @@ st.markdown("""
     }
 
     .graph-container {
-        border: 1px solid rgba(148, 163, 184, 0.24);
-        border-radius: 16px;
-        background: rgba(9, 14, 30, 0.85);
+        border: 1.5px solid rgba(255, 255, 255, 0.9);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.85);
         padding: 6px;
-        box-shadow: 0 14px 36px rgba(2, 6, 23, 0.55);
+        box-shadow: 0 12px 30px rgba(99, 102, 241, 0.1);
         margin-bottom: 16px;
         overflow: hidden;
     }
 
     .empty-box {
-        background: rgba(15, 23, 42, 0.55);
-        backdrop-filter: blur(14px);
-        border: 1px dashed rgba(103, 232, 249, 0.35);
-        border-radius: 18px;
-        box-shadow: 0 12px 32px rgba(2, 6, 23, 0.4);
-        padding: 48px 25px;
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(16px);
+        border: 1.5px dashed rgba(99, 102, 241, 0.35);
+        border-radius: 22px;
+        box-shadow: 0 10px 28px rgba(99, 102, 241, 0.08);
+        padding: 46px 25px;
         text-align: center;
         margin-top: 25px;
-        color: #cbd5e1;
+        color: #475569;
     }
 
     label, .stSlider label, .stTextInput label, .stSelectbox label, .stCheckbox label {
-        color: #e2e8f0 !important;
-        font-weight: 600 !important;
+        color: #272c42 !important;
+        font-weight: 700 !important;
         font-size: 0.84rem !important;
     }
 
     div[data-testid="stTextInput"] input {
-        background-color: rgba(15, 23, 42, 0.78) !important;
-        border: 1px solid rgba(148, 163, 184, 0.28) !important;
-        border-radius: 12px !important;
-        color: #f8fafc !important;
+        background-color: rgba(255, 255, 255, 0.84) !important;
+        border: 1.5px solid rgba(148, 163, 184, 0.38) !important;
+        border-radius: 14px !important;
+        color: #1e2235 !important;
         font-family: 'JetBrains Mono', monospace !important;
         padding: 10px 14px !important;
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.06) !important;
     }
 
     div[data-testid="stTextInput"] input:focus {
-        border-color: #38bdf8 !important;
-        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+        border-color: #0284c7 !important;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
     }
 
     div[data-baseweb="select"] > div {
-        background-color: rgba(15, 23, 42, 0.78) !important;
-        border: 1px solid rgba(148, 163, 184, 0.28) !important;
-        border-radius: 12px !important;
-        color: #f8fafc !important;
+        background-color: rgba(255, 255, 255, 0.84) !important;
+        border: 1.5px solid rgba(148, 163, 184, 0.38) !important;
+        border-radius: 14px !important;
+        color: #1e2235 !important;
     }
 
     .stButton > button {
-        background: linear-gradient(90deg, #0ea5e9 0%, #8b5cf6 52%, #10b981 100%) !important;
+        background: linear-gradient(90deg, #4f46e5 0%, #0284c7 52%, #0d9488 100%) !important;
         color: #ffffff !important;
         border: none !important;
-        border-radius: 12px !important;
-        box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35) !important;
+        border-radius: 14px !important;
+        box-shadow: 0 8px 22px rgba(2, 132, 199, 0.28) !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
         font-weight: 700 !important;
-        letter-spacing: 0.5px !important;
+        letter-spacing: 0.4px !important;
         padding: 0.65rem 1.4rem !important;
         transition: all 0.2s ease !important;
     }
 
     .stButton > button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 12px 30px rgba(56, 189, 248, 0.45) !important;
-        filter: brightness(1.06) !important;
+        box-shadow: 0 12px 26px rgba(13, 148, 136, 0.32) !important;
+        filter: brightness(1.04) !important;
     }
 
     div[data-testid="stTabs"] {
@@ -221,45 +220,45 @@ st.markdown("""
     }
 
     div[data-baseweb="tab-list"] button[data-baseweb="tab"], button[role="tab"] {
-        background: rgba(15, 23, 42, 0.55) !important;
-        border: 1px solid rgba(148, 163, 184, 0.22) !important;
-        border-radius: 12px !important;
+        background: rgba(255, 255, 255, 0.65) !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+        border-radius: 14px !important;
         padding: 10px 18px !important;
         transition: all 0.2s ease !important;
     }
 
     div[data-baseweb="tab-list"] button[data-baseweb="tab"] p, button[role="tab"] p {
         font-family: 'JetBrains Mono', monospace !important;
-        font-weight: 600 !important;
-        color: #94a3b8 !important;
-        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+        color: #525b75 !important;
+        font-size: 0.84rem !important;
         margin: 0 !important;
     }
 
     div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"], button[role="tab"][aria-selected="true"] {
-        background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(168, 85, 247, 0.24)) !important;
-        border: 1px solid rgba(103, 232, 249, 0.55) !important;
-        box-shadow: 0 6px 20px rgba(56, 189, 248, 0.18) !important;
+        background: linear-gradient(120deg, rgba(196, 181, 253, 0.48), rgba(165, 243, 252, 0.52), rgba(167, 243, 208, 0.48)) !important;
+        border: 1.5px solid rgba(79, 70, 229, 0.45) !important;
+        box-shadow: 0 6px 18px rgba(79, 70, 229, 0.14) !important;
     }
 
     div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p, button[role="tab"][aria-selected="true"] p {
-        color: #f8fafc !important;
-        font-weight: 700 !important;
+        color: #1e2235 !important;
+        font-weight: 800 !important;
     }
 
     div[data-testid="stTabs"] div[role="tabpanel"], div[data-testid="stTabs"] div[data-baseweb="tab-panel"] {
-        background: rgba(15, 23, 42, 0.58) !important;
-        backdrop-filter: blur(16px) !important;
-        border: 1px solid rgba(148, 163, 184, 0.2) !important;
-        border-radius: 18px !important;
-        box-shadow: 0 14px 36px rgba(2, 6, 23, 0.45) !important;
+        background: rgba(255, 255, 255, 0.74) !important;
+        backdrop-filter: blur(18px) !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
+        border-radius: 22px !important;
+        box-shadow: 0 12px 32px rgba(99, 102, 241, 0.1) !important;
         padding: 24px 22px !important;
     }
 
     .aurora-table-wrap {
-        border: 1px solid rgba(148, 163, 184, 0.24);
-        border-radius: 14px;
-        background: rgba(9, 14, 30, 0.72);
+        border: 1.5px solid rgba(148, 163, 184, 0.28);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.82);
         overflow-x: auto;
         margin-top: 14px;
         margin-bottom: 24px;
@@ -270,36 +269,36 @@ st.markdown("""
         border-collapse: collapse;
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.83rem;
-        color: #e2e8f0;
+        color: #1e2235;
     }
 
     table.aurora-table th {
-        background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(49, 46, 129, 0.85));
-        color: #a5f3fc;
-        font-weight: 700;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+        background: linear-gradient(90deg, rgba(224, 231, 255, 0.92), rgba(204, 251, 241, 0.9));
+        color: #1e2235;
+        font-weight: 800;
+        border-bottom: 1.5px solid rgba(148, 163, 184, 0.35);
         padding: 12px 14px;
         white-space: nowrap;
     }
 
     table.aurora-table td {
         padding: 10px 14px;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
     }
 
     table.aurora-table tbody tr:nth-child(even) {
-        background-color: rgba(30, 41, 59, 0.35);
+        background-color: rgba(241, 245, 249, 0.55);
     }
 
     table.aurora-table tbody tr:hover {
-        background-color: rgba(56, 189, 248, 0.12) !important;
+        background-color: rgba(165, 243, 252, 0.35) !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ==============================================================================
-# FUNGSI RENDER TABEL AURORA
+# FUNGSI RENDER TABEL SOFT AURORA
 # ==============================================================================
 def render_aurora_table(df, align_right_cols=None, badge_col=None):
     align_right_cols = align_right_cols or []
@@ -317,19 +316,19 @@ def render_aurora_table(df, align_right_cols=None, badge_col=None):
             if col == badge_col:
                 val_str = html_lib.escape(str(val))
                 if idx == 0:
-                    badge_style = "background: linear-gradient(90deg, #38bdf8, #a855f7); color: #090d16; font-weight: 800;"
+                    badge_style = "background: linear-gradient(90deg, #4f46e5, #0d9488); color: #ffffff; font-weight: 800;"
                 elif idx in (1, 2):
-                    badge_style = "background: rgba(56, 189, 248, 0.2); color: #67e8f9; border: 1px solid rgba(103, 232, 249, 0.45);"
+                    badge_style = "background: rgba(2, 132, 199, 0.14); color: #0369a1; border: 1px solid rgba(2, 132, 199, 0.32);"
                 else:
-                    badge_style = "background: rgba(148, 163, 184, 0.16); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.25);"
+                    badge_style = "background: rgba(100, 116, 139, 0.12); color: #334155; border: 1px solid rgba(148, 163, 184, 0.3);"
                 cell_html = f"<span style='{badge_style} padding: 3px 9px; border-radius: 999px; display: inline-block;'>{val_str}</span>"
             elif col == 'DOI / URL':
                 doi_text = str(val)
                 href = doi_text if doi_text.startswith('http') else f"https://doi.org/{doi_text}"
                 short_txt = doi_text[:44] + '...' if len(doi_text) > 44 else doi_text
-                cell_html = f"<a href='{html_lib.escape(href)}' target='_blank' style='color: #67e8f9; text-decoration: underline;'>{html_lib.escape(short_txt)}</a>"
+                cell_html = f"<a href='{html_lib.escape(href)}' target='_blank' style='color: #0284c7; font-weight: 700; text-decoration: underline;'>{html_lib.escape(short_txt)}</a>"
             elif col in ('SKOR PAGERANK', 'PAGERANK'):
-                cell_html = f"<span style='color: #34d399; font-weight: 700;'>{val}</span>"
+                cell_html = f"<span style='color: #0d9488; font-weight: 800;'>{val}</span>"
             else:
                 cell_html = html_lib.escape(str(val))
             html.append(f"<td style='text-align: {align};'>{cell_html}</td>")
@@ -360,9 +359,9 @@ def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
         return pr
 
 
-AURORA_PALETTE = [
-    '#38bdf8', '#a855f7', '#34d399', '#818cf8', '#f472b6', '#2dd4bf',
-    '#60a5fa', '#c084fc', '#4ade80', '#22d3ee', '#e879f9', '#a3e635'
+PASTEL_AURORA_PALETTE = [
+    '#7c6cf0', '#0ea5e9', '#10b981', '#a855f7', '#06b6d4', '#14b8a6',
+    '#6366f1', '#ec4899', '#3b82f6', '#8b5cf6', '#22c55e', '#0284c7'
 ]
 
 
@@ -426,7 +425,6 @@ class DOICitationCrawler:
         return d.strip('/')
 
     def _resolve_openalex_refs(self, work_ids):
-        """Mengonversi batch OpenAlex Work IDs menjadi DOI dalam 1x request API."""
         resolved_dois = []
         uncached = []
         for wid in work_ids:
@@ -438,7 +436,6 @@ class DOICitationCrawler:
             else:
                 uncached.append(short_id)
 
-        # Batch per 40 ID agar URL query tetap pendek
         for i in range(0, len(uncached), 40):
             chunk = uncached[i:i + 40]
             filter_str = "|".join(chunk)
@@ -470,7 +467,6 @@ class DOICitationCrawler:
         return resolved_dois
 
     def _fetch_doi_metadata(self, doi):
-        """Mengambil judul, tahun, dan daftar DOI referensi dari OpenAlex (fallback Crossref)."""
         oa_url = f"https://api.openalex.org/works/https://doi.org/{doi}"
         try:
             res = self.session.get(oa_url, headers=self.headers, timeout=self.timeout)
@@ -485,7 +481,6 @@ class DOICitationCrawler:
         except Exception:
             pass
 
-        # Fallback ke Crossref API
         cr_url = f"https://api.crossref.org/works/{doi}"
         try:
             res = self.session.get(cr_url, headers=self.headers, timeout=self.timeout)
@@ -547,7 +542,6 @@ class DOICitationCrawler:
 
                 for target_doi in unique_refs:
                     self.all_nodes.add(target_doi)
-                    # A -> B berarti Paper A menyitir Paper B
                     self.edges.append((current_doi, target_doi))
                     if target_doi not in self.visited:
                         queue.append((target_doi, current_depth + 1))
@@ -560,10 +554,10 @@ class DOICitationCrawler:
 
 
 # ==============================================================================
-# FUNGSI MEMBANGUN CITATION GRAPH (AURORA DARK THEME)
+# FUNGSI MEMBANGUN CITATION GRAPH (SOFT AURORA LIGHT THEME)
 # ==============================================================================
 def generate_aurora_citation_graph(G, pr_scores, ranking, paper_titles, seed_doi,
-                                   color_mode="Klaster Komunitas (Aurora)",
+                                   color_mode="Klaster Komunitas (Soft Aurora)",
                                    show_all_labels=False, max_vis_nodes=120):
     if G.number_of_nodes() > max_vis_nodes:
         top_ids = [u for u, _ in ranking[:max_vis_nodes]]
@@ -571,7 +565,7 @@ def generate_aurora_citation_graph(G, pr_scores, ranking, paper_titles, seed_doi
     else:
         G_vis = G
 
-    net = Network(height='720px', width='100%', directed=True, bgcolor='#090e1e', font_color='#f8fafc', cdn_resources='remote')
+    net = Network(height='720px', width='100%', directed=True, bgcolor='#f7f9ff', font_color='#1e2235', cdn_resources='remote')
     net.force_atlas_2based(gravity=-180, central_gravity=0.01, spring_length=150, spring_strength=0.05, damping=0.82, overlap=0.4)
 
     max_pr = max(pr_scores.values()) if pr_scores else 1
@@ -591,12 +585,12 @@ def generate_aurora_citation_graph(G, pr_scores, ranking, paper_titles, seed_doi
         comm_id = node_communities.get(node, 0)
 
         if node == top1_node or node == seed_doi:
-            node_color, border_color = '#ffffff', '#38bdf8'
-        elif color_mode == "Klaster Komunitas (Aurora)":
-            node_color, border_color = AURORA_PALETTE[comm_id % len(AURORA_PALETTE)], '#0f172a'
+            node_color, border_color = '#4f46e5', '#0d9488'
+        elif color_mode == "Klaster Komunitas (Soft Aurora)":
+            node_color, border_color = PASTEL_AURORA_PALETTE[comm_id % len(PASTEL_AURORA_PALETTE)], '#ffffff'
         else:
-            node_color = f'rgb({int(56 + norm_val * 112)}, {int(189 - norm_val * 104)}, {int(248)})'
-            border_color = '#e0f2fe'
+            node_color = f'rgb({int(129 - norm_val * 116)}, {int(140 + norm_val * 40)}, {int(248 - norm_val * 100)})'
+            border_color = '#ffffff'
 
         node_label = name_short if show_all_labels or node in top_nodes or node == top1_node else " "
         hover_text = (
@@ -608,16 +602,16 @@ def generate_aurora_citation_graph(G, pr_scores, ranking, paper_titles, seed_doi
 
         net.add_node(
             node, label=node_label, title=hover_text, size=node_size,
-            color={'background': node_color, 'border': border_color, 'highlight': {'background': '#34d399', 'border': '#ffffff'}},
+            color={'background': node_color, 'border': border_color, 'highlight': {'background': '#0d9488', 'border': '#1e2235'}},
             borderWidth=2.5, borderWidthSelected=4,
-            font={'size': 12, 'color': '#f8fafc', 'face': 'JetBrains Mono, monospace', 'strokeWidth': 3, 'strokeColor': '#090e1e'}
+            font={'size': 12, 'color': '#1e2235', 'face': 'JetBrains Mono, monospace', 'strokeWidth': 4, 'strokeColor': '#f7f9ff'}
         )
 
     for source, target in G_vis.edges():
         is_highlight = target in top_nodes[:2]
         net.add_edge(
             source, target,
-            color={'color': 'rgba(103, 232, 249, 0.55)' if is_highlight else 'rgba(148, 163, 184, 0.28)', 'highlight': '#a855f7'},
+            color={'color': 'rgba(79, 70, 229, 0.45)' if is_highlight else 'rgba(148, 163, 184, 0.42)', 'highlight': '#0d9488'},
             arrows={'to': {'enabled': True, 'scaleFactor': 0.50}},
             width=1.6 if is_highlight else 1.0,
             smooth={'type': 'continuous', 'roundness': 0.12}
@@ -705,8 +699,8 @@ if crawl_btn:
 if st.session_state.graph_data is None:
     st.markdown("""
     <div class='empty-box'>
-        <div style='font-size: 1.45rem; font-weight: 700; color: #67e8f9; margin-bottom: 8px;'>[ JARINGAN SITASI KOSONG ]</div>
-        <p style='margin: 0; color: #94a3b8;'>Masukkan Seed DOI jurnal untuk menelusuri referensi dan membangun graf sitasi.</p>
+        <div style='font-size: 1.45rem; font-weight: 800; color: #4f46e5; margin-bottom: 8px;'>[ JARINGAN SITASI KOSONG ]</div>
+        <p style='margin: 0; color: #525b75;'>Masukkan Seed DOI jurnal untuk menelusuri referensi dan membangun graf sitasi.</p>
     </div>
     """, unsafe_allow_html=True)
     st.stop()
@@ -763,7 +757,7 @@ tab1, tab2, tab3 = st.tabs(["01 // CITATION GRAPH", "02 // TOP-10 PAGERANK", "03
 with tab1:
     col_t1, col_t2, col_t3 = st.columns([3, 2, 2])
     with col_t1:
-        color_choice = st.selectbox("SKEMA WARNA SIMPUL:", ["Klaster Komunitas (Aurora)", "Gradasi Skor PageRank"])
+        color_choice = st.selectbox("SKEMA WARNA SIMPUL:", ["Klaster Komunitas (Soft Aurora)", "Gradasi Skor PageRank"])
     with col_t2:
         max_vis_input = st.slider("MAKS NODE VISUAL:", 30, 250, 120, 10)
     with col_t3:
@@ -800,17 +794,17 @@ with tab2:
     st.markdown(render_aurora_table(df_top10, align_right_cols=['TAHUN', 'SKOR PAGERANK', 'IN-DEGREE', 'OUT-DEGREE'], badge_col='RANK'), unsafe_allow_html=True)
 
     if len(ranking) > 0:
-        fig, ax = plt.subplots(figsize=(10, 4.5), facecolor='#0b1121')
-        ax.set_facecolor('#0f172a')
+        fig, ax = plt.subplots(figsize=(10, 4.5), facecolor='#f7f9ff')
+        ax.set_facecolor('#ffffff')
         plot_items = ranking[:min(10, len(ranking))][::-1]
-        bars = ax.barh(range(len(plot_items)), [s for _, s in plot_items], color='#38bdf8', edgecolor='#a855f7', linewidth=1.4, height=0.62)
+        ax.barh(range(len(plot_items)), [s for _, s in plot_items], color='#6366f1', edgecolor='#0d9488', linewidth=1.4, height=0.62)
         ax.set_yticks(range(len(plot_items)))
-        ax.set_yticklabels([get_node_label(u, titles, max_len=28) for u, _ in plot_items], fontsize=9, fontweight='bold', family='monospace', color='#e2e8f0')
-        ax.tick_params(axis='x', colors='#94a3b8')
+        ax.set_yticklabels([get_node_label(u, titles, max_len=28) for u, _ in plot_items], fontsize=9, fontweight='bold', family='monospace', color='#1e2235')
+        ax.tick_params(axis='x', colors='#475569')
         for spine in ax.spines.values():
-            spine.set_edgecolor('#334155')
+            spine.set_edgecolor('#cbd5e1')
             spine.set_linewidth(1.2)
-        ax.grid(axis='x', linestyle='--', color='#334155', alpha=0.7)
+        ax.grid(axis='x', linestyle='--', color='#cbd5e1', alpha=0.75)
         plt.tight_layout()
         st.pyplot(fig)
 
@@ -836,15 +830,15 @@ with tab3:
     html_table = adj_matrix.to_html(classes="aurora-table", border=0)
     html_table = (
         html_table
-        .replace('<td>1</td>', '<td style="color: #34d399; font-weight: 800; font-size: 1.05rem; background: rgba(52, 211, 153, 0.14);">1</td>')
-        .replace('<td>0</td>', '<td style="color: #64748b; opacity: 0.45;">0</td>')
+        .replace('<td>1</td>', '<td style="color: #0f766e; font-weight: 800; font-size: 1.05rem; background: rgba(153, 246, 228, 0.55);">1</td>')
+        .replace('<td>0</td>', '<td style="color: #94a3b8; opacity: 0.55;">0</td>')
     )
 
     custom_html = f"""
 <div class="aurora-table-wrap">{html_table}</div>
 <style>
-.aurora-table tbody th {{ background-color: #0f172a; color: #cbd5e1; text-align: left; position: sticky; left: 0; z-index: 1; border-right: 1px solid rgba(148, 163, 184, 0.28); padding: 10px 14px; }}
-.aurora-table thead th:first-child {{ position: sticky; left: 0; z-index: 2; background-color: #1e293b; }}
+.aurora-table tbody th {{ background-color: #eef2ff; color: #1e2235; text-align: left; position: sticky; left: 0; z-index: 1; border-right: 1px solid rgba(148, 163, 184, 0.35); padding: 10px 14px; }}
+.aurora-table thead th:first-child {{ position: sticky; left: 0; z-index: 2; background-color: #e0e7ff; }}
 </style>
 """
     st.markdown(custom_html, unsafe_allow_html=True)
