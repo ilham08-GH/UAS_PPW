@@ -87,19 +87,24 @@ def render_cardboard_table(df, align_right_cols=None, badge_col=None):
                 url_text = str(val)
                 short_url = url_text[:46] + '...' if len(url_text) > 46 else url_text
                 cell_html = f"<a href='{html_lib.escape(url_text)}' target='_blank' style='color: #2f5266; text-decoration: underline;'>{html_lib.escape(short_url)}</a>"
-            elif col in ('SKOR PAGERANK', 'PAGERANK'): cell_html = f"<span style='color: #b85d38;'>{val}</span>"
-            else: cell_html = html_lib.escape(str(val))
+            elif col in ('SKOR PAGERANK', 'PAGERANK'):
+                cell_html = f"<span style='color: #b85d38;'>{val}</span>"
+            else:
+                cell_html = html_lib.escape(str(val))
             html.append(f"<td style='text-align: {align};'>{cell_html}</td>")
         html.append("</tr>")
     html.append("</tbody></table></div>")
     return "".join(html)
 
+
 def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
-    try: return nx.pagerank(G, alpha=alpha, max_iter=max_iter, tol=tol)
+    try:
+        return nx.pagerank(G, alpha=alpha, max_iter=max_iter, tol=tol)
     except Exception:
         nodes = list(G.nodes())
         N = len(nodes)
-        if N == 0: return {}
+        if N == 0:
+            return {}
         pr = {n: 1.0 / N for n in nodes}
         for _ in range(max_iter):
             pr_new = {}
@@ -108,21 +113,29 @@ def compute_pagerank(G, alpha=0.85, max_iter=100, tol=1e-6):
             for v in nodes:
                 in_sum = sum(pr[u] / G.out_degree(u) for u in G.predecessors(v) if G.out_degree(u) > 0)
                 pr_new[v] = (1.0 - alpha) / N + alpha * in_sum + dangling_contrib
-            if sum(abs(pr_new[n] - pr[n]) for n in nodes) < tol: break
+            if sum(abs(pr_new[n] - pr[n]) for n in nodes) < tol:
+                break
             pr = pr_new
         return pr
 
+
 COMMUNITY_PALETTE = ['#b85d38', '#3b6e5c', '#d48c29', '#2f5266', '#8c3f4d', '#6b5b3e', '#4a6b82', '#a35c37', '#526b44', '#7a496b', '#9c6b30', '#3d5a58']
+
 
 def detect_communities(G):
     G_undir = G.to_undirected()
-    if G_undir.number_of_nodes() == 0: return {}
-    try: comm_list = list(nx.community.louvain_communities(G_undir, seed=42))
-    except: comm_list = [set(G.nodes())]
+    if G_undir.number_of_nodes() == 0:
+        return {}
+    try:
+        comm_list = list(nx.community.louvain_communities(G_undir, seed=42))
+    except Exception:
+        comm_list = [set(G.nodes())]
     node_to_community = {}
     for comm_idx, members in enumerate(comm_list):
-        for node in members: node_to_community[node] = comm_idx
+        for node in members:
+            node_to_community[node] = comm_idx
     return node_to_community
+
 
 def get_page_name(url, page_titles=None, max_len=30):
     parsed = urlparse(url)
@@ -131,7 +144,8 @@ def get_page_name(url, page_titles=None, max_len=30):
         for sep in [' - ', ' | ', ' — ', ' :: ']:
             if sep in title:
                 parts = title.split(sep)
-                if len(parts[0]) > 3: title = parts[0].strip()
+                if len(parts[0]) > 3:
+                    title = parts[0].strip()
         if title and title != '-' and title != url and not title.startswith('http'):
             return title[:max_len]
     netloc = parsed.netloc.replace('www.', '')
@@ -139,19 +153,20 @@ def get_page_name(url, page_titles=None, max_len=30):
     subdomain = netloc.split('.')[0] if len(netloc.split('.')) > 2 else ""
     if path:
         clean_slug = path.split('/')[-1].replace('.html', '').replace('.php', '').replace('-', ' ').title()
-        if len(clean_slug) > max_len: clean_slug = clean_slug[:max_len-3] + '...'
+        if len(clean_slug) > max_len:
+            clean_slug = clean_slug[:max_len-3] + '...'
         return f"[{subdomain}] {clean_slug}"[:max_len] if subdomain else clean_slug[:max_len]
     return f"[{subdomain}] Beranda"[:max_len] if subdomain else f"Beranda ({netloc})"[:max_len]
 
 
 # ==============================================================================
-# KELAS WEB CRAWLER (TANPA MAX PER DOMAIN)
+# KELAS WEB CRAWLER (BATAS KUOTA PER LEVEL KEDALAMAN)
 # ==============================================================================
 class WebCrawler:
     def __init__(self, seed_url, max_depth=3, max_pages=50, delay=0.4, timeout=16):
         self.seed_url = seed_url
         self.max_depth = max_depth
-        self.max_pages = max_pages
+        self.max_pages = max_pages  # Batas jumlah halaman yang diproses per level depth
         self.delay = delay
         self.timeout = timeout
         self.visited = set()
@@ -160,7 +175,41 @@ class WebCrawler:
         self.page_titles = {}
         self.depth_counts = {}
         self.failed_urls = []
-        ...
+
+        self.session = requests.Session()
+        retries = Retry(total=1, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
+        self.session.mount('https://', HTTPAdapter(max_retries=retries))
+        self.session.mount('http://', HTTPAdapter(max_retries=retries))
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        }
+
+    def _normalize_url(self, url):
+        parsed = urlparse(url)
+        path = parsed.path.rstrip('/')
+        return f"{parsed.scheme}://{parsed.netloc}{path}"
+
+    def _is_valid_url(self, url):
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme not in ('http', 'https'):
+                return False
+            skip_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar',
+                        '.docx', '.xlsx', '.pptx', '.css', '.js', '.svg', '.mp4')
+            if parsed.path.lower().endswith(skip_ext):
+                return False
+            if any(bad in parsed.path.lower() for bad in ['/wp-includes/', '/feed/', '/trackback/']):
+                return False
+            return True
+        except Exception:
+            return False
+
+    def _fetch(self, url):
+        try:
+            return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=True)
+        except requests.exceptions.SSLError:
+            return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=False)
 
     def crawl(self, progress_callback=None):
         start_url = self._normalize_url(self.seed_url)
@@ -174,7 +223,6 @@ class WebCrawler:
             if current_url in self.visited:
                 continue
 
-            # Batas kuota berlaku per level kedalaman (bukan total global)
             used_in_depth = self.depth_counts.get(current_depth, 0)
             if used_in_depth >= self.max_pages:
                 continue
@@ -215,8 +263,9 @@ class WebCrawler:
             except Exception as e:
                 self.failed_urls.append((current_url, str(e)[:40]))
 
-        return self.all_nodes, self.edges, self.page_titles
-        
+        return self.visited, self.edges, self.page_titles
+
+
 # ==============================================================================
 # FUNGSI MEMBANGUN CITATION GRAPH
 # ==============================================================================
@@ -227,7 +276,7 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
     max_pr = max(pr_scores.values()) if pr_scores else 1
     min_pr = min(pr_scores.values()) if pr_scores else 0
     denom = (max_pr - min_pr) if (max_pr - min_pr) > 0 else 1
-    
+
     node_communities = detect_communities(G)
     top_nodes = [u for u, _ in ranking[:5]]
     top1_node = ranking[0][0] if ranking else seed_url
@@ -238,12 +287,14 @@ def generate_connected_papers_graph(G, pr_scores, ranking, page_titles, seed_url
         node_size = 12 + (norm_val ** 0.8) * 45
         name_short = get_page_name(node, page_titles, max_len=28)
         title_full = page_titles.get(node, name_short)
-        rank_pos = [i + 1 for i, (u, _) in enumerate(ranking) if u == node]
         comm_id = node_communities.get(node, 0)
 
-        if node == top1_node or node == seed_url: node_color, border_color = '#1f1a16', '#b85d38'
-        elif color_mode == "Klaster Komunitas (Connected Papers)": node_color, border_color = COMMUNITY_PALETTE[comm_id % len(COMMUNITY_PALETTE)], '#1f1a16'
-        else: node_color, border_color = f'rgb({int(214 - norm_val * 120)}, {int(188 - norm_val * 115)}, {int(151 - norm_val * 110)})', '#1f1a16'
+        if node == top1_node or node == seed_url:
+            node_color, border_color = '#1f1a16', '#b85d38'
+        elif color_mode == "Klaster Komunitas (Connected Papers)":
+            node_color, border_color = COMMUNITY_PALETTE[comm_id % len(COMMUNITY_PALETTE)], '#1f1a16'
+        else:
+            node_color, border_color = f'rgb({int(214 - norm_val * 120)}, {int(188 - norm_val * 115)}, {int(151 - norm_val * 110)})', '#1f1a16'
 
         node_label = name_short if show_all_labels or node in top_nodes or node == top1_node else " "
         hover_text = f"JUDUL: {title_full}\nURL: {node}\n------------------------\nPAGERANK: {pr_val:.5f}\nKLASTER: #{comm_id + 1}\nIN: {G.in_degree(node)} | OUT: {G.out_degree(node)}"
@@ -270,13 +321,16 @@ st.markdown("<div class='cardboard-header' style='text-align: center;'><div clas
 
 with st.container():
     seed_url_input = st.text_input("SEED URL TARGET (HALAMAN AWAL):", value="", placeholder="Contoh: https://trunojoyo.ac.id")
-    
-    # Kembali ke 4 kolom (slider domain dihapus)
+
     col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-    with col_p1: max_depth_input = st.slider("KEDALAMAN:", 1, 4, 2)
-    with col_p2: max_pages_input = st.slider("MAKS NODE:", 10, 200, 60, 10)
-    with col_p3: delay_input = st.slider("JEDA (DETIK):", 0.1, 2.0, 0.4)
-    with col_p4: damping_factor = st.slider("DAMPING (d):", 0.10, 0.99, 0.85)
+    with col_p1:
+        max_depth_input = st.slider("KEDALAMAN:", 1, 4, 2)
+    with col_p2:
+        max_pages_input = st.slider("MAKS / DEPTH:", 10, 200, 50, 10)
+    with col_p3:
+        delay_input = st.slider("JEDA (DETIK):", 0.1, 2.0, 0.4)
+    with col_p4:
+        damping_factor = st.slider("DAMPING (d):", 0.10, 0.99, 0.85)
 
     crawl_btn = st.button("MULAI CRAWLING & BANGUN GRAF", type="primary", use_container_width=True)
 
@@ -288,33 +342,36 @@ if 'graph_data' not in st.session_state:
 
 if crawl_btn:
     raw_seed = seed_url_input.strip()
-    if not raw_seed: st.warning("Masukkan URL target!")
+    if not raw_seed:
+        st.warning("Masukkan URL target!")
     else:
-        if not raw_seed.startswith(('http://', 'https://')): raw_seed = 'https://' + raw_seed
+        if not raw_seed.startswith(('http://', 'https://')):
+            raw_seed = 'https://' + raw_seed
         crawler = WebCrawler(seed_url=raw_seed, max_depth=max_depth_input, max_pages=max_pages_input, delay=delay_input)
-        
+
         progress_bar = st.progress(0)
         status_text = st.empty()
-        def on_progress(current, total, url, title):
-            progress_bar.progress(min(1.0, current / total))
-            status_text.caption(f"[{current}/{total}] MERAYAPI: {url[:60]}...")
-            
-        with st.spinner(f"Memetakan jaringan hyperlink..."):
+        max_expected_crawls = max(1, (max_depth_input + 1) * max_pages_input)
+
+        def on_progress(current, depth, url, title):
+            progress_bar.progress(min(1.0, current / max_expected_crawls))
+            status_text.caption(f"[{current}] DEPTH {depth} | MERAYAPI: {url[:60]}...")
+
+        with st.spinner("Memetakan jaringan hyperlink..."):
             visited, edges, titles = crawler.crawl(progress_callback=on_progress)
-            
+
         progress_bar.empty()
         status_text.empty()
-        
-        if len(visited) == 0: st.error("GAGAL MENGAMBIL DATA.")
+
+        if len(visited) == 0:
+            st.error("GAGAL MENGAMBIL DATA.")
         else:
             G_crawled = nx.DiGraph()
-            G_crawled.add_nodes_from(all_nodes)
+            G_crawled.add_nodes_from(crawler.all_nodes)
             G_crawled.add_edges_from(edges)
-            G_crawled.remove_edges_from(nx.selfloop_edges(G_crawled))
             G_crawled.remove_edges_from(nx.selfloop_edges(G_crawled))
             st.session_state.graph_data = {'G': G_crawled, 'titles': titles, 'seed': raw_seed}
 
-# KODE DI BAWAH INI HARUS RATA KIRI (TIDAK BOLEH MENJOROK / DI DALAM IF)
 if st.session_state.graph_data is None:
     st.markdown("<div class='empty-box'><div style='font-size: 1.5rem; font-weight: 700; margin-bottom: 10px;'>[ DATA KOSONG ]</div><p>Masukkan Seed URL dan mulai Crawling.</p></div>", unsafe_allow_html=True)
     st.stop()
@@ -334,7 +391,13 @@ out_degs = dict(G.out_degree())
 G_undir = G.to_undirected()
 clustering_coeff = nx.average_clustering(G_undir) if G_undir.number_of_nodes() > 1 else 0
 N_nodes, E_edges = G.number_of_nodes(), G.number_of_edges()
-avg_path_len = nx.average_shortest_path_length(G_undir) if nx.is_connected(G_undir) else 0
+if nx.is_connected(G_undir) and N_nodes > 1:
+    avg_path_len = nx.average_shortest_path_length(G_undir)
+elif N_nodes > 1:
+    largest_cc = max(nx.connected_components(G_undir), key=len)
+    avg_path_len = nx.average_shortest_path_length(G_undir.subgraph(largest_cc)) if len(largest_cc) > 1 else 0
+else:
+    avg_path_len = 0
 
 best_node = ranking[0][0] if ranking else seed_url
 best_title = get_page_name(best_node, titles, max_len=22)
@@ -342,11 +405,16 @@ best_pr = ranking[0][1] if ranking else 0.0
 
 st.markdown("<br>", unsafe_allow_html=True)
 col1, col2, col3, col4, col5 = st.columns(5)
-with col1: st.markdown(f"<div class='metric-card'><div class='metric-val'>{N_nodes}</div><div class='metric-lbl'>SIMPUL (NODES)</div></div>", unsafe_allow_html=True)
-with col2: st.markdown(f"<div class='metric-card'><div class='metric-val'>{E_edges}</div><div class='metric-lbl'>BUSUR (EDGES)</div></div>", unsafe_allow_html=True)
-with col3: st.markdown(f"<div class='metric-card'><div class='metric-val'>{clustering_coeff:.3f}</div><div class='metric-lbl'>KOEF. KLASTER</div></div>", unsafe_allow_html=True)
-with col4: st.markdown(f"<div class='metric-card'><div class='metric-val'>{avg_path_len:.2f}</div><div class='metric-lbl'>JARAK RATA-RATA</div></div>", unsafe_allow_html=True)
-with col5: st.markdown(f"<div class='metric-card'><div class='metric-val'>{best_pr:.3f}</div><div class='metric-lbl'>TOP: {best_title}</div></div>", unsafe_allow_html=True)
+with col1:
+    st.markdown(f"<div class='metric-card'><div class='metric-val'>{N_nodes}</div><div class='metric-lbl'>SIMPUL (NODES)</div></div>", unsafe_allow_html=True)
+with col2:
+    st.markdown(f"<div class='metric-card'><div class='metric-val'>{E_edges}</div><div class='metric-lbl'>BUSUR (EDGES)</div></div>", unsafe_allow_html=True)
+with col3:
+    st.markdown(f"<div class='metric-card'><div class='metric-val'>{clustering_coeff:.3f}</div><div class='metric-lbl'>KOEF. KLASTER</div></div>", unsafe_allow_html=True)
+with col4:
+    st.markdown(f"<div class='metric-card'><div class='metric-val'>{avg_path_len:.2f}</div><div class='metric-lbl'>JARAK RATA-RATA</div></div>", unsafe_allow_html=True)
+with col5:
+    st.markdown(f"<div class='metric-card'><div class='metric-val'>{best_pr:.3f}</div><div class='metric-lbl'>TOP: {best_title}</div></div>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 
@@ -355,11 +423,11 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==============================================================================
 tab1, tab2, tab3 = st.tabs(["01 // CITATION GRAPH", "02 // TOP-10 PAGERANK", "03 // ADJACENCY MATRIX"])
 
-# --- TAB 1: GRAF ---
 with tab1:
     col_t1, col_t2 = st.columns([3, 2])
-    with col_t1: color_choice = st.selectbox("SKEMA WARNA SIMPUL:", ["Klaster Komunitas (Connected Papers)", "Gradasi Skor PageRank"])
-    with col_t2: 
+    with col_t1:
+        color_choice = st.selectbox("SKEMA WARNA SIMPUL:", ["Klaster Komunitas (Connected Papers)", "Gradasi Skor PageRank"])
+    with col_t2:
         st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
         show_all_lbl = st.checkbox("TAMPILKAN SEMUA JUDUL", value=False)
 
@@ -368,31 +436,30 @@ with tab1:
     components.html(html_graph, height=720, scrolling=False)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# --- TAB 2: PAGERANK ---
 with tab2:
     st.markdown("#### PERINGKAT 10 HALAMAN (PETA AFILIASI)")
     top10_rows = [{'RANK': f"#{i+1:02d}", 'NAMA HALAMAN': get_page_name(url, titles, max_len=36), 'URL ASLI': url, 'SKOR PAGERANK': round(score, 6), 'IN-DEGREE': in_degs.get(url, 0), 'OUT-DEGREE': out_degs.get(url, 0)} for i, (url, score) in enumerate(ranking[:10])]
     df_top10 = pd.DataFrame(top10_rows)
     st.markdown(render_cardboard_table(df_top10, align_right_cols=['SKOR PAGERANK', 'IN-DEGREE', 'OUT-DEGREE'], badge_col='RANK'), unsafe_allow_html=True)
-    
+
     if len(ranking) > 0:
         fig, ax = plt.subplots(figsize=(10, 4.5), facecolor='#f4ece1')
         ax.set_facecolor('#f4ece1')
         plot_items = ranking[:min(10, len(ranking))][::-1]
-        bars = ax.barh(range(len(plot_items)), [s for _, s in plot_items], color='#b85d38', edgecolor='#1f1a16', linewidth=2, height=0.62)
+        ax.barh(range(len(plot_items)), [s for _, s in plot_items], color='#b85d38', edgecolor='#1f1a16', linewidth=2, height=0.62)
         ax.set_yticks(range(len(plot_items)))
         ax.set_yticklabels([get_page_name(u, titles, max_len=24) for u, _ in plot_items], fontsize=9, fontweight='bold', family='monospace', color='#1f1a16')
-        for spine in ax.spines.values(): spine.set_edgecolor('#1f1a16'); spine.set_linewidth(2)
+        for spine in ax.spines.values():
+            spine.set_edgecolor('#1f1a16')
+            spine.set_linewidth(2)
         ax.grid(axis='x', linestyle='--', color='#8c7a66', alpha=0.6)
         plt.tight_layout()
         st.pyplot(fig)
 
-# --- TAB 3: MATRIKS KETETANGGAAN ---
 with tab3:
     st.markdown("#### TABEL MATRIKS ADJACENCY")
     adj_matrix = nx.to_pandas_adjacency(G, dtype=int)
-    
-    # Penanganan nama kolom ganda
+
     short_names, seen_names = {}, {}
     for node in G.nodes():
         name = get_page_name(node, titles, max_len=15)
@@ -402,12 +469,12 @@ with tab3:
         else:
             seen_names[name] = 1
             short_names[node] = name
-            
+
     adj_matrix.rename(index=short_names, columns=short_names, inplace=True)
-    
+
     html_table = adj_matrix.to_html(classes="cardboard-table", border=0)
     html_table = html_table.replace('<td>1</td>', '<td style="color: #b85d38; font-weight: 900; font-size: 1.15rem;">1</td>').replace('<td>0</td>', '<td style="color: #8c7a66; opacity: 0.4;">0</td>')
-    
+
     custom_html = f"""
 <div class="cardboard-table-wrap">{html_table}</div>
 <style>
