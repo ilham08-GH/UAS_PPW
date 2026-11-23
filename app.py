@@ -148,65 +148,53 @@ def get_page_name(url, page_titles=None, max_len=30):
 # KELAS WEB CRAWLER (TANPA MAX PER DOMAIN)
 # ==============================================================================
 class WebCrawler:
-    def __init__(self, seed_url, max_depth=2, max_pages=30, delay=0.4, timeout=16):
+    def __init__(self, seed_url, max_depth=3, max_links_per_depth=50, delay=0.4, timeout=16):
         self.seed_url = seed_url
         self.max_depth = max_depth
-        self.max_pages = max_pages
+        self.max_links_per_depth = max_links_per_depth
         self.delay = delay
         self.timeout = timeout
         self.visited = set()
+        self.all_nodes = set()
         self.edges = []
         self.page_titles = {}
+        self.depth_counts = {}
         self.failed_urls = []
-        
-        self.session = requests.Session()
-        retries = Retry(total=1, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
-        self.session.mount('https://', HTTPAdapter(max_retries=retries))
-        self.session.mount('http://', HTTPAdapter(max_retries=retries))
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        }
-        
-    def _normalize_url(self, url):
-        parsed = urlparse(url)
-        path = parsed.path.rstrip('/')
-        return f"{parsed.scheme}://{parsed.netloc}{path}"
-
-    def _is_valid_url(self, url):
-        try:
-            parsed = urlparse(url)
-            if parsed.scheme not in ('http', 'https'): return False
-            skip_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar', '.docx', '.xlsx', '.pptx', '.css', '.js', '.svg', '.mp4')
-            if parsed.path.lower().endswith(skip_ext): return False
-            if any(bad in parsed.path.lower() for bad in ['/wp-includes/', '/feed/', '/trackback/']): return False
-            return True
-        except:
-            return False
-
-    def _fetch(self, url):
-        try: return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=True)
-        except requests.exceptions.SSLError: return self.session.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True, verify=False)
-        except Exception as e: raise e
+        ...
 
     def crawl(self, progress_callback=None):
-        queue = deque([(self._normalize_url(self.seed_url), 0)])
-        while queue and len(self.visited) < self.max_pages:
+        start_url = self._normalize_url(self.seed_url)
+        queue = deque([(start_url, 0)])
+        self.all_nodes.add(start_url)
+
+        while queue:
             current_url, current_depth = queue.popleft()
-            if current_url in self.visited: continue
-            
+            if current_depth > self.max_depth:
+                continue
+            if current_url in self.visited:
+                continue
+
+            # Batas kuota berlaku per level kedalaman (bukan total global)
+            used_in_depth = self.depth_counts.get(current_depth, 0)
+            if used_in_depth >= self.max_links_per_depth:
+                continue
+
             try:
                 response = self._fetch(current_url)
-                if response.status_code != 200 or 'text/html' not in response.headers.get('Content-Type', ''): continue
-                
+                if response.status_code != 200 or 'text/html' not in response.headers.get('Content-Type', ''):
+                    continue
+
                 soup = BeautifulSoup(response.text, 'html.parser')
                 title_tag = soup.find('title')
                 title = title_tag.get_text(strip=True) if title_tag else current_url
-                if any(sig in title.lower() for sig in ['page not found', '404', 'error']): continue
+                if any(sig in title.lower() for sig in ['page not found', '404', 'error']):
+                    continue
 
                 self.visited.add(current_url)
+                self.all_nodes.add(current_url)
+                self.depth_counts[current_depth] = used_in_depth + 1
                 self.page_titles[current_url] = title
-                
+
                 if current_depth < self.max_depth:
                     found_links = set()
                     for a_tag in soup.find_all('a', href=True):
@@ -214,17 +202,20 @@ class WebCrawler:
                         norm = self._normalize_url(full_url)
                         if self._is_valid_url(norm) and norm != current_url:
                             found_links.add(norm)
-                            
+
                     for target in found_links:
+                        self.all_nodes.add(target)
                         self.edges.append((current_url, target))
                         if target not in self.visited:
                             queue.append((target, current_depth + 1))
-                        
-                if progress_callback: progress_callback(len(self.visited), self.max_pages, current_url, title)
+
+                if progress_callback:
+                    progress_callback(len(self.visited), current_depth, current_url, title)
                 time.sleep(self.delay)
             except Exception as e:
                 self.failed_urls.append((current_url, str(e)[:40]))
-        return self.visited, self.edges, self.page_titles
+
+        return self.all_nodes, self.edges, self.page_titles
         
 # ==============================================================================
 # FUNGSI MEMBANGUN CITATION GRAPH
@@ -317,8 +308,9 @@ if crawl_btn:
         if len(visited) == 0: st.error("GAGAL MENGAMBIL DATA.")
         else:
             G_crawled = nx.DiGraph()
-            G_crawled.add_nodes_from(visited)
-            G_crawled.add_edges_from([(u, v) for u, v in edges if u in visited and v in visited])
+            G_crawled.add_nodes_from(all_nodes)
+            G_crawled.add_edges_from(edges)
+            G_crawled.remove_edges_from(nx.selfloop_edges(G_crawled))
             G_crawled.remove_edges_from(nx.selfloop_edges(G_crawled))
             st.session_state.graph_data = {'G': G_crawled, 'titles': titles, 'seed': raw_seed}
 
