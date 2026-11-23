@@ -151,7 +151,7 @@ class WebCrawler:
     def __init__(self, seed_url, max_depth=3, max_pages=50, delay=0.4, timeout=16):
         self.seed_url = seed_url
         self.max_depth = max_depth
-        self.max_links_per_depth = max_links_per_depth
+        self.max_pages = max_pages
         self.delay = delay
         self.timeout = timeout
         self.visited = set()
@@ -176,7 +176,7 @@ class WebCrawler:
 
             # Batas kuota berlaku per level kedalaman (bukan total global)
             used_in_depth = self.depth_counts.get(current_depth, 0)
-            if used_in_depth >= self.max_links_per_depth:
+            if used_in_depth >= self.max_pages:
                 continue
 
             try:
